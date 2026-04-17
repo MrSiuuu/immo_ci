@@ -1,0 +1,176 @@
+import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { connexion } from './authService'
+import { supabase } from '../../lib/supabase'
+import { withTimeout } from '../../lib/withTimeout'
+
+const AUTH_TIMEOUT_MS = 30_000
+
+/**
+ * Page de connexion réservée aux comptes avec rôle admin (vérifié après login).
+ */
+export default function LoginPage() {
+  const navigate = useNavigate()
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [error, setError] = useState(null)
+  const [pending, setPending] = useState(false)
+
+  async function handleSubmit(e) {
+    e.preventDefault()
+    setError(null)
+    setPending(true)
+
+    try {
+      const { data, error: errAuth } = await withTimeout(
+        connexion(email, password),
+        AUTH_TIMEOUT_MS,
+        `Connexion trop longue (>${AUTH_TIMEOUT_MS / 1000}s). Vérifiez le réseau et l’URL Supabase (.env).`
+      )
+
+      if (errAuth) {
+        setError(errAuth.message)
+        return
+      }
+
+      const { data: profil, error: errProfil } = await withTimeout(
+        supabase.from('users').select('role').eq('id', data.user.id).single(),
+        AUTH_TIMEOUT_MS,
+        `Chargement du profil trop long (>${AUTH_TIMEOUT_MS / 1000}s).`
+      )
+
+      if (errProfil || !profil) {
+        setError('Profil utilisateur introuvable.')
+        await supabase.auth.signOut()
+        return
+      }
+
+      if (profil.role === 'admin') {
+        navigate('/admin/dashboard')
+        return
+      }
+
+      setError('Accès non autorisé')
+      await supabase.auth.signOut()
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Erreur de connexion.'
+      setError(msg)
+      try {
+        await supabase.auth.signOut()
+      } catch {
+        /* ignore */
+      }
+    } finally {
+      setPending(false)
+    }
+  }
+
+  return (
+    <div className="flex min-h-screen flex-col bg-[#FAF6EF] md:flex-row dark:bg-slate-950">
+      {/* Colonne gauche — formulaire (bloc centré verticalement) */}
+      <div className="flex min-h-[100dvh] w-full flex-col bg-[#1A1A2E] md:h-screen md:w-1/2 md:min-h-0 dark:bg-[#151525]">
+        <div className="flex flex-1 flex-col justify-center px-6 py-10 md:px-12 md:py-12 lg:px-16">
+          <div className="mx-auto w-full max-w-md">
+          <div className="mb-10 flex items-center gap-3">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#D97B00]">
+              <svg
+                viewBox="0 0 24 24"
+                className="h-5 w-5 text-white"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={2}
+                aria-hidden
+              >
+                <path d="M4 10.5 12 4l8 6.5V20a1 1 0 0 1-1 1h-5v-7H10v7H5a1 1 0 0 1-1-1v-9.5Z" strokeLinejoin="round" />
+              </svg>
+            </div>
+            <div>
+              <span
+                className="block text-xl font-semibold leading-tight text-white"
+                style={{ fontFamily: '"Playfair Display", serif' }}
+              >
+                ImmoCI
+              </span>
+              <span className="mt-0.5 block text-xs text-[#D97B00]/60">Espace professionnel</span>
+            </div>
+          </div>
+
+          <h2
+            className="text-2xl font-semibold leading-tight text-white"
+            style={{ fontFamily: '"Playfair Display", serif' }}
+          >
+            Bon retour parmi nous
+          </h2>
+          <p className="mt-2 text-sm text-white/55 dark:text-white/50">
+            Connectez-vous pour accéder à votre espace
+          </p>
+
+          <form onSubmit={handleSubmit} className="mt-8 space-y-5">
+            <div>
+              <label htmlFor="email" className="mb-1.5 block text-sm font-medium text-white/60">
+                Email
+              </label>
+              <input
+                id="email"
+                type="email"
+                autoComplete="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full rounded-lg border border-white/15 bg-white/8 px-3 py-2.5 text-white placeholder:text-white/35 focus:outline-none focus:ring-2 focus:ring-[#D97B00] dark:border-white/20 dark:bg-white/10"
+              />
+            </div>
+            <div>
+              <label htmlFor="password" className="mb-1.5 block text-sm font-medium text-white/60">
+                Mot de passe
+              </label>
+              <input
+                id="password"
+                type="password"
+                autoComplete="current-password"
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full rounded-lg border border-white/15 bg-white/8 px-3 py-2.5 text-white placeholder:text-white/35 focus:outline-none focus:ring-2 focus:ring-[#D97B00] dark:border-white/20 dark:bg-white/10"
+              />
+            </div>
+
+            <button
+              type="submit"
+              disabled={pending}
+              className="w-full cursor-pointer rounded-lg bg-[#D97B00] px-4 py-2.5 font-medium text-white transition hover:bg-[#c26a00] disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {pending ? 'Connexion…' : 'Se connecter'}
+            </button>
+          </form>
+
+          {error && (
+            <p className="mt-5 text-center text-sm text-red-300 dark:text-red-400" role="alert">
+              {error}
+            </p>
+          )}
+          </div>
+        </div>
+      </div>
+
+      {/* Colonne droite — visuel + citation (masqué sur mobile) */}
+      <div className="relative hidden min-h-screen w-full md:block md:w-1/2">
+        <img
+          src="https://images.unsplash.com/photo-1560518883-ce09059eeffa?w=1200&q=80"
+          alt=""
+          className="absolute inset-0 h-full w-full object-cover"
+        />
+        <div className="absolute inset-0 bg-black/25" aria-hidden />
+        <div className="relative z-10 flex min-h-screen flex-col justify-end px-8 pb-12 pt-24 md:px-12">
+          <blockquote
+            className="text-center text-lg italic leading-relaxed text-white md:text-xl"
+            style={{ fontFamily: '"Playfair Display", serif' }}
+          >
+            « L&apos;excellence immobilière commence par une relation de confiance. »
+          </blockquote>
+          <p className="mt-4 text-center text-sm font-medium text-[#D97B00]/90">ImmoCI — Abidjan</p>
+        </div>
+      </div>
+    </div>
+  )
+}

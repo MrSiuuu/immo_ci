@@ -1,0 +1,38 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+node_modules
+dist
+dist-ssr
+
+# Environnement (clés Supabase, secrets)
+.env
+.env.*
+!.env.example
+*.local
+
+# Build / cache
+.vite
+coverage
+*.tsbuildinfo
+
+# Documentation : seul README.md à la racine du dépôt est versionné
+*.md
+!README.md
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
