@@ -1,5 +1,5 @@
 import { useContext } from 'react'
-import { UserContext } from '../contexts/UserContext'
+import { UserContext } from '../contexts/UserContext.jsx'
 
 /**
  * Accès au profil + rôle — doit être utilisé sous {@link UserProvider}.
