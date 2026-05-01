@@ -1,8 +1,14 @@
 [phases.setup]
-nixPkgs = ["nodejs_22"]
+nixPkgs = ['nodejs_20', 'npm-9_x']
+nixOverlays = [
+  'https://github.com/railwayapp/nix-npm-overlay/archive/main.tar.gz'
+]
 
 [phases.install]
-cmds = ["npm install"]
+cmds = ['npm install']
 
 [phases.build]
-cmds = ["npm run build"]
+cmds = ['npm run build']
+
+[start]
+cmd = 'node_modules/.bin/serve -s dist -l 3000'
