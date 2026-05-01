@@ -3,7 +3,18 @@ import { UserContext } from '../contexts/UserContext'
 
 /**
  * Accès au profil + rôle — doit être utilisé sous {@link UserProvider}.
- * @returns {{ user: { id: string, email: string } | null, role: 'admin' | 'agent' | 'user' | null, loading: boolean }}
+ * @returns {{
+ *   user: { id: string, email: string } | null,
+ *   role: 'admin' | 'agent' | 'user' | null,
+ *   statut: string | null,
+ *   mustChangePassword: boolean,
+ *   agenceId: string | null,
+ *   agence: object | null,
+ *   loading: boolean,
+ *   needsAgentOnboarding: boolean,
+ *   hasSeenTutorial: boolean,
+ *   refreshProfile: () => Promise<void>
+ * }}
  */
 export function useUser() {
   const ctx = useContext(UserContext)

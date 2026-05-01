@@ -1,5 +1,6 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useUser } from '../../../hooks/useUser.js'
 import StepInfosBase from './StepInfosBase.jsx'
 import StepDetails from './StepDetails.jsx'
 import StepPhotos from './StepPhotos.jsx'
@@ -58,6 +59,7 @@ const initialForm = {
  */
 export default function AnnonceForm() {
   const navigate = useNavigate()
+  const { role, agenceId, agence } = useUser()
   const [step, setStep] = useState(1)
   const [formData, setFormData] = useState(initialForm)
   const [donneesRef, setDonneesRef] = useState({ typesBiens: [], villes: [], agences: [] })
@@ -84,6 +86,19 @@ export default function AnnonceForm() {
     }
   }, [])
 
+  const donneesAffichees = useMemo(() => {
+    if (role === 'agent' && agenceId) {
+      return {
+        ...donneesRef,
+        agences: (donneesRef.agences ?? []).filter((a) => String(a.id) === String(agenceId)),
+      }
+    }
+    return donneesRef
+  }, [donneesRef, role, agenceId])
+
+  /** Publication : réservée si l’agence de l’agent n’est pas encore validée par l’admin. */
+  const canPublish = role !== 'agent' || agence?.verification_status === 'verified'
+
   const onVilleChange = useCallback(async (villeId) => {
     if (!villeId) {
       setQuartiers([])
@@ -102,6 +117,9 @@ export default function AnnonceForm() {
     setError(null)
 
     let agence_id = formData.agence_id
+    if (role === 'agent' && agenceId) {
+      agence_id = agenceId
+    }
     if (!agence_id) {
       const { data } = await supabase.from('agences').select('id').eq('nom', 'OZ Immo').single()
       agence_id = data?.id ?? ''
@@ -149,7 +167,8 @@ export default function AnnonceForm() {
     }
 
     setLoading(false)
-    navigate('/admin/annonces')
+    const liste = role === 'agent' ? '/agence/annonces' : '/admin/annonces'
+    navigate(liste)
   }
 
   const pct = ((step - 1) / (STEPS.length - 1)) * 100
@@ -189,7 +208,7 @@ export default function AnnonceForm() {
         <StepInfosBase
           formData={formData}
           setFormData={setFormData}
-          donneesRef={donneesRef}
+          donneesRef={donneesAffichees}
           quartiers={quartiers}
           onVilleChange={onVilleChange}
           onNext={() => setStep(2)}
@@ -227,6 +246,7 @@ export default function AnnonceForm() {
           quartiers={quartiers}
           loading={loading}
           error={error}
+          canPublish={canPublish}
           onPublier={() => handleSauvegarder('publie')}
           onBrouillon={() => handleSauvegarder('brouillon')}
           onPrev={() => setStep(4)}

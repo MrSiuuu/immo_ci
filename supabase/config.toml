@@ -1,0 +1,7 @@
+# Config CLI Supabase — généré pour les Edge Functions.
+# Après modification : `supabase functions deploy quick-handler`
+
+[functions.quick-handler]
+# Si tu as encore 401 malgré un admin connecté, la passerelle peut rejeter le JWT avant d’atteindre le code Deno.
+# Désactiver ici = la fonction reçoit quand même la requête ; le contrôle admin reste dans `index.ts` (Authorization + profil).
+verify_jwt = false

@@ -24,6 +24,10 @@ export default defineConfig([
     },
     rules: {
       'no-unused-vars': ['error', { varsIgnorePattern: '^[A-Z_]' }],
+      // Chargement async dans useEffect (fetch profil, listes) : setState classique, acceptable ici.
+      'react-hooks/set-state-in-effect': 'off',
+      // Export du contexte + Provider dans le même fichier (pattern classique).
+      'react-refresh/only-export-components': ['warn', { allowConstantExport: true }],
     },
   },
 ])

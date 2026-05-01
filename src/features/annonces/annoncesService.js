@@ -28,7 +28,7 @@ export async function chargerDonneesReference() {
 export async function chargerQuartiers(ville_id) {
   const { data, error } = await supabase
     .from('quartiers')
-    .select('id, nom')
+    .select('*')
     .eq('ville_id', ville_id)
     .order('nom')
 
@@ -107,4 +107,45 @@ export async function enregistrerPhotos(photos, annonce_id) {
 
   const { error } = await supabase.from('photos').insert(rows)
   return { error }
+}
+
+/**
+ * Retourne l'agence systeme "Nestymo Admin" pour rattacher les annonces admin.
+ * Cree l'agence si elle n'existe pas.
+ */
+export async function getOrCreateNestymoAdminAgency() {
+  const { data: existing, error: findErr } = await supabase
+    .from('agences')
+    .select('id')
+    .eq('nom', 'Nestymo Admin')
+    .limit(1)
+    .maybeSingle()
+
+  if (findErr) {
+    return { agenceId: null, error: findErr }
+  }
+  if (existing?.id) {
+    return { agenceId: existing.id, error: null }
+  }
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user?.id) {
+    return { agenceId: null, error: new Error('Utilisateur non authentifie') }
+  }
+
+  const { data: created, error: createErr } = await supabase
+    .from('agences')
+    .insert({
+      nom: 'Nestymo Admin',
+      description: 'Agence systeme pour les annonces creees par les administrateurs',
+      statut: 'active',
+      verification_status: 'verified',
+      created_by: user.id,
+    })
+    .select('id')
+    .single()
+
+  return { agenceId: created?.id ?? null, error: createErr ?? null }
 }

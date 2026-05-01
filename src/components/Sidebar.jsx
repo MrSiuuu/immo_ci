@@ -1,4 +1,16 @@
+import { createElement } from 'react'
 import { NavLink } from 'react-router-dom'
+import {
+  BarChart3,
+  Briefcase,
+  Building2,
+  FileText,
+  LayoutDashboard,
+  Settings,
+  ShieldCheck,
+  Sparkles,
+  Users,
+} from 'lucide-react'
 import { useUser } from '../hooks/useUser'
 import { deconnexion } from '../features/auth/authService'
 
@@ -13,10 +25,34 @@ const linkActive =
 const linkInactive =
   `${linkShell} mx-2 w-[calc(100%-1rem)] border-transparent text-white/45 hover:bg-white/5 hover:text-white/80`
 
-function NavItem({ to, end, children, badge, badgeVariant = 'neutral' }) {
+function NavItem({ to, end, icon, children, badge, badgeVariant = 'neutral', disabled = false, tooltip = '' }) {
+  if (disabled) {
+    return (
+      <div
+        className={`${linkInactive} cursor-not-allowed opacity-50`}
+        title={tooltip}
+        role="link"
+        aria-disabled="true"
+      >
+        <span className="flex min-w-0 items-center gap-3">
+          {createElement(icon, { className: 'h-5 w-5 shrink-0', 'aria-hidden': true })}
+          {children}
+        </span>
+        {badge != null ? (
+          <span className="ml-auto shrink-0 rounded-full bg-[#E02020] px-2 py-0.5 text-[8px] font-semibold uppercase text-white">
+            {badge}
+          </span>
+        ) : null}
+      </div>
+    )
+  }
+
   return (
     <NavLink to={to} end={end} className={({ isActive }) => (isActive ? linkActive : linkInactive)}>
-      <span className="flex min-w-0 items-center gap-3">{children}</span>
+      <span className="flex min-w-0 items-center gap-3">
+        {createElement(icon, { className: 'h-5 w-5 shrink-0', 'aria-hidden': true })}
+        {children}
+      </span>
       {badge != null ? (
         <span
           className={`ml-auto shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold tabular-nums transition-colors ${
@@ -48,55 +84,6 @@ function IconHome(props) {
   )
 }
 
-function IconList(props) {
-  return (
-    <svg viewBox="0 0 24 24" className="h-5 w-5 shrink-0" fill="none" stroke="currentColor" strokeWidth="1.75" aria-hidden {...props}>
-      <path d="M9 6h11M9 12h11M9 18h11M5 6h.01M5 12h.01M5 18h.01" strokeLinecap="round" />
-    </svg>
-  )
-}
-
-function IconBuilding(props) {
-  return (
-    <svg viewBox="0 0 24 24" className="h-5 w-5 shrink-0" fill="none" stroke="currentColor" strokeWidth="1.75" aria-hidden {...props}>
-      <path d="M4 21V8l8-4 8 4v13" strokeLinejoin="round" />
-      <path d="M9 21v-5h6v5" strokeLinejoin="round" />
-      <path d="M9 10h.01M12 10h.01M15 10h.01" strokeLinecap="round" />
-    </svg>
-  )
-}
-
-function IconChart(props) {
-  return (
-    <svg viewBox="0 0 24 24" className="h-5 w-5 shrink-0" fill="none" stroke="currentColor" strokeWidth="1.75" aria-hidden {...props}>
-      <path d="M4 19V5" strokeLinecap="round" />
-      <path d="M4 19h16" strokeLinecap="round" />
-      <path d="M8 16V11M12 16V8M16 16v-3" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  )
-}
-
-function IconMail(props) {
-  return (
-    <svg viewBox="0 0 24 24" className="h-5 w-5 shrink-0" fill="none" stroke="currentColor" strokeWidth="1.75" aria-hidden {...props}>
-      <path d="M4 6h16v12H4V6Z" strokeLinejoin="round" />
-      <path d="m4 7 8 6 8-6" strokeLinejoin="round" />
-    </svg>
-  )
-}
-
-function IconCog(props) {
-  return (
-    <svg viewBox="0 0 24 24" className="h-5 w-5 shrink-0" fill="none" stroke="currentColor" strokeWidth="1.75" aria-hidden {...props}>
-      <circle cx="12" cy="12" r="3" strokeLinejoin="round" />
-      <path
-        d="M12 1v2M12 21v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M1 12h2M21 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4"
-        strokeLinecap="round"
-      />
-    </svg>
-  )
-}
-
 function initialsFromName(name) {
   if (!name?.trim()) return 'OI'
   const parts = name.trim().split(/\s+/)
@@ -107,10 +94,11 @@ function initialsFromName(name) {
 }
 
 /**
- * Navigation latérale admin (design system ImmoCI).
+ * Navigation latérale admin (design system Nestymo).
  */
 export default function Sidebar() {
-  const { user } = useUser()
+  const { user, role } = useUser()
+  const isAdmin = role === 'admin'
 
   const displayName = user?.user_metadata?.full_name?.trim() || 'Olivier'
   const avatarLetters = initialsFromName(displayName)
@@ -130,42 +118,71 @@ export default function Sidebar() {
         </div>
         <div className="min-w-0">
           <span className="block text-lg font-semibold leading-tight text-white" style={FONT_PLAYFAIR}>
-            ImmoCI
+            Nestymo
           </span>
           <span className="mt-0.5 block text-[11px] font-medium tracking-wide text-[#D97B00]/55">
-            Espace Admin
+            {isAdmin ? 'Espace Admin' : 'Espace Agence'}
           </span>
         </div>
       </div>
 
       <nav className="flex flex-1 flex-col items-stretch overflow-y-auto px-2 pb-4" aria-label="Navigation principale">
         <SectionLabel>Principal</SectionLabel>
-        <NavItem to="/admin/dashboard" end>
-          <IconHome />
+        <NavItem to="/admin/dashboard" end icon={LayoutDashboard}>
           <span>Tableau de bord</span>
         </NavItem>
-        <NavItem to="/admin/annonces" badge={348}>
-          <IconList />
+        <NavItem to="/admin/annonces" badge={isAdmin ? 348 : undefined} icon={Building2}>
           <span>Annonces</span>
         </NavItem>
-        <NavItem to="/admin/agences">
-          <IconBuilding />
-          <span>Agences</span>
-        </NavItem>
+        {isAdmin ? (
+          <NavItem to="/admin/agences" icon={Briefcase}>
+            <span>Agences</span>
+          </NavItem>
+        ) : null}
+        {isAdmin ? (
+          <NavItem to="/admin/contacts" icon={Users}>
+            <span>Contacts</span>
+          </NavItem>
+        ) : null}
 
-        <SectionLabel>Analyse</SectionLabel>
-        <NavItem to="/admin/statistiques">
-          <IconChart />
-          <span>Statistiques</span>
-        </NavItem>
-        <NavItem to="/admin/contacts" badge={5} badgeVariant="danger">
-          <IconMail />
-          <span>Contacts</span>
-        </NavItem>
+        {isAdmin ? <SectionLabel>Analyse</SectionLabel> : null}
+        {isAdmin ? (
+          <NavItem to="/admin/statistiques" icon={BarChart3}>
+            <span>Statistiques</span>
+          </NavItem>
+        ) : null}
+        {isAdmin ? (
+          <NavItem
+            to="/admin/agent-ia"
+            icon={Sparkles}
+            disabled
+            badge="A venir"
+            tooltip="Fonctionnalite en cours de developpement"
+          >
+            <span>Agent IA</span>
+          </NavItem>
+        ) : null}
 
         <SectionLabel>Système</SectionLabel>
-        <NavItem to="/admin/parametres">
-          <IconCog />
+        <NavItem
+          to="/admin/contenu"
+          icon={FileText}
+          disabled
+          badge="A venir"
+          tooltip="Fonctionnalite en cours de developpement"
+        >
+          <span>Contenu</span>
+        </NavItem>
+        <NavItem
+          to="/admin/moderation"
+          icon={ShieldCheck}
+          disabled
+          badge="A venir"
+          tooltip="Fonctionnalite en cours de developpement"
+        >
+          <span>Moderation</span>
+        </NavItem>
+        <NavItem to="/admin/parametres" icon={Settings}>
           <span>Paramètres</span>
         </NavItem>
       </nav>
@@ -180,7 +197,7 @@ export default function Sidebar() {
           </div>
           <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-semibold text-white">{displayName}</p>
-            <p className="truncate text-xs text-white/50">Administrateur</p>
+            <p className="truncate text-xs text-white/50">{isAdmin ? 'Administrateur' : 'Agent immobilier'}</p>
           </div>
         </div>
         <button

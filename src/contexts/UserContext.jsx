@@ -1,74 +1,155 @@
-import { createContext, useEffect, useMemo, useRef, useState } from 'react'
+import { createContext, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { withTimeout } from '../lib/withTimeout'
+import { agentNeedsOnboarding } from '../lib/agentOnboarding.js'
 
 /**
  * Contexte utilisateur.
- * - Bootstrap : `getSession()` au montage → déclenche toujours le chargement du rôle (requête REST vers *.supabase.co).
- * - `onAuthStateChange` : on ignore `INITIAL_SESSION` (redondant avec getSession et source de courses).
- * - Autres événements : SIGNED_IN, SIGNED_OUT, TOKEN_REFRESHED, etc.
+ * Profil enrichi : rôle, statut, must_change_password, agence (pour agent / onboarding).
  */
 export const UserContext = createContext(undefined)
+
+const PROFILE_TIMEOUT_MS = 20_000
+const GET_SESSION_TIMEOUT_MS = 30_000
 
 export function UserProvider({ children }) {
   const [user, setUser] = useState(null)
   const [role, setRole] = useState(null)
+  const [statut, setStatut] = useState(null)
+  const [mustChangePassword, setMustChangePassword] = useState(false)
+  const [agenceId, setAgenceId] = useState(null)
+  const [agence, setAgence] = useState(null)
+  const [hasSeenTutorial, setHasSeenTutorial] = useState(true)
   const [loading, setLoading] = useState(true)
 
   const authSnapshotRef = useRef({ userId: null, role: null })
+  const shouldPreserveAuthState = useCallback((sessionUser, meta) => {
+    if (meta !== 'TOKEN_REFRESHED' || !sessionUser?.id) return false
+    const snap = authSnapshotRef.current
+    return snap.userId === sessionUser.id && snap.role !== null
+  }, [])
+
+  const loadProfileForUser = useCallback(async (sessionUser, meta = '') => {
+    if (!sessionUser) {
+      setUser(null)
+      setRole(null)
+      setStatut(null)
+      setMustChangePassword(false)
+      setAgenceId(null)
+      setAgence(null)
+      setHasSeenTutorial(true)
+      authSnapshotRef.current = { userId: null, role: null }
+      setLoading(false)
+      return
+    }
+
+    setUser({ id: sessionUser.id, email: sessionUser.email ?? '' })
+
+    try {
+      // Colonnes stables (évite 400 si la migration has_seen_tutorial n’est pas encore appliquée).
+      const { data: row, error } = await withTimeout(
+        supabase
+          .from('users')
+          .select('role, statut, must_change_password, agence_id')
+          .eq('id', sessionUser.id)
+          .single(),
+        PROFILE_TIMEOUT_MS,
+        `profil utilisateur > ${PROFILE_TIMEOUT_MS}ms`
+      )
+
+      if (error || !row) {
+        if (shouldPreserveAuthState(sessionUser, meta)) {
+          return
+        }
+        setRole(null)
+        setStatut(null)
+        setMustChangePassword(false)
+        setAgenceId(null)
+        setAgence(null)
+        setHasSeenTutorial(true)
+        authSnapshotRef.current = { userId: sessionUser.id, role: null }
+        return
+      }
+
+      const r = row.role ?? null
+      const st = row.statut ?? null
+      const mcp = Boolean(row.must_change_password)
+      const aid = row.agence_id ?? null
+
+      setRole(r)
+      setStatut(st)
+      setMustChangePassword(mcp)
+      setAgenceId(aid)
+
+      // has_seen_tutorial : requête séparée pour ne pas casser le chargement si la colonne n’existe pas encore.
+      try {
+        const { data: tut, error: tutErr } = await withTimeout(
+          supabase.from('users').select('has_seen_tutorial').eq('id', sessionUser.id).maybeSingle(),
+          PROFILE_TIMEOUT_MS,
+          `has_seen_tutorial > ${PROFILE_TIMEOUT_MS}ms`
+        )
+        if (!tutErr && tut && typeof tut.has_seen_tutorial === 'boolean') {
+          setHasSeenTutorial(Boolean(tut.has_seen_tutorial))
+        } else {
+          setHasSeenTutorial(true)
+        }
+      } catch {
+        setHasSeenTutorial(true)
+      }
+
+      if (aid) {
+        const { data: ag, error: errAg } = await withTimeout(
+          supabase
+            .from('agences')
+            .select(
+              'id, nom, whatsapp, verification_status, statut, ville, ville_id, quartier, description, adresse, telephone, email, site_web, logo, logo_url',
+            )
+            .eq('id', aid)
+            .single(),
+          PROFILE_TIMEOUT_MS,
+          `agence liée > ${PROFILE_TIMEOUT_MS}ms`
+        )
+        if (!errAg && ag) {
+          setAgence({
+            ...ag,
+            logo_url: ag.logo_url ?? ag.logo ?? null,
+          })
+        } else {
+          setAgence(null)
+        }
+      } else {
+        setAgence(null)
+      }
+
+      authSnapshotRef.current = { userId: sessionUser.id, role: r }
+    } catch (e) {
+      console.error('[UserContext] erreur chargement profil', meta, e)
+      if (shouldPreserveAuthState(sessionUser, meta)) {
+        return
+      }
+      setRole(null)
+      setStatut(null)
+      setMustChangePassword(false)
+      setAgenceId(null)
+      setAgence(null)
+      setHasSeenTutorial(true)
+      authSnapshotRef.current = { userId: sessionUser.id, role: null }
+    } finally {
+      setLoading(false)
+    }
+  }, [shouldPreserveAuthState])
+
+  /** Recharge le profil depuis la base (après changement mdp, onboarding, etc.). */
+  const refreshProfile = useCallback(async () => {
+    const { data: { user: u } } = await supabase.auth.getUser()
+    if (!u) return
+    setLoading(true)
+    await loadProfileForUser(u, 'refreshProfile')
+  }, [loadProfileForUser])
 
   useEffect(() => {
     let cancelled = false
 
-    async function loadSessionAndRole(sessionUser, meta = '') {
-      if (!sessionUser) {
-        if (!cancelled) {
-          setUser(null)
-          setRole(null)
-          authSnapshotRef.current = { userId: null, role: null }
-        }
-        setLoading(false)
-        return
-      }
-
-      if (!cancelled) {
-        setUser({ id: sessionUser.id, email: sessionUser.email ?? '' })
-      }
-
-      const PROFILE_TIMEOUT_MS = 20_000
-
-      try {
-        const { data, error } = await withTimeout(
-          supabase.from('users').select('role').eq('id', sessionUser.id).single(),
-          PROFILE_TIMEOUT_MS,
-          `profil utilisateur > ${PROFILE_TIMEOUT_MS}ms`
-        )
-
-        if (cancelled) return
-
-        if (error || !data) {
-          setRole(null)
-          authSnapshotRef.current = { userId: sessionUser.id, role: null }
-        } else {
-          const r = data.role ?? null
-          setRole(r)
-          authSnapshotRef.current = { userId: sessionUser.id, role: r }
-        }
-      } catch (e) {
-        console.error('[UserContext] erreur chargement profil', meta, e)
-        if (!cancelled) {
-          setRole(null)
-          authSnapshotRef.current = { userId: sessionUser.id, role: null }
-        }
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    /** Réseau lent / projet Supabase en pause : éviter un spinner infini tout en logguer le souci. */
-    const GET_SESSION_TIMEOUT_MS = 30_000
-
-    /** Obligatoire : seul ce flux garantit une requête REST après refresh (listener seul peut ne rien envoyer). */
     async function bootstrap() {
       setLoading(true)
       let session = null
@@ -84,7 +165,7 @@ export function UserProvider({ children }) {
         console.error('[UserContext] session init', e)
       }
       if (cancelled) return
-      await loadSessionAndRole(session?.user ?? null, 'bootstrap')
+      await loadProfileForUser(session?.user ?? null, 'bootstrap')
     }
 
     bootstrap()
@@ -97,7 +178,6 @@ export function UserProvider({ children }) {
         return
       }
 
-      // Déjà couvert par bootstrap() — évite doublons et absences de requête réseau
       if (event === 'INITIAL_SESSION') {
         return
       }
@@ -107,22 +187,17 @@ export function UserProvider({ children }) {
 
       if (event === 'TOKEN_REFRESHED' && session?.user) {
         setLoading(false)
-        await loadSessionAndRole(session.user, 'TOKEN_REFRESHED')
+        await loadProfileForUser(session.user, 'TOKEN_REFRESHED')
         return
       }
 
-      if (
-        event === 'SIGNED_IN' &&
-        uid &&
-        snap.userId === uid &&
-        snap.role !== null
-      ) {
+      if (event === 'SIGNED_IN' && uid && snap.userId === uid && snap.role !== null) {
         setLoading(false)
         return
       }
 
       setLoading(true)
-      await loadSessionAndRole(session?.user ?? null, event)
+      await loadProfileForUser(session?.user ?? null, event)
 
       if (!session?.user && !cancelled) {
         setLoading(false)
@@ -133,9 +208,28 @@ export function UserProvider({ children }) {
       cancelled = true
       subscription.unsubscribe()
     }
-  }, [])
+  }, [loadProfileForUser])
 
-  const value = useMemo(() => ({ user, role, loading }), [user, role, loading])
+  const needsAgentOnboarding = useMemo(
+    () => agentNeedsOnboarding(role, agence),
+    [role, agence]
+  )
+
+  const value = useMemo(
+    () => ({
+      user,
+      role,
+      statut,
+      mustChangePassword,
+      agenceId,
+      agence,
+      loading,
+      needsAgentOnboarding,
+      hasSeenTutorial,
+      refreshProfile,
+    }),
+    [user, role, statut, mustChangePassword, agenceId, agence, loading, needsAgentOnboarding, hasSeenTutorial, refreshProfile]
+  )
 
   return <UserContext.Provider value={value}>{children}</UserContext.Provider>
 }

@@ -1,22 +1,16 @@
 import { useMemo } from 'react'
+import { Link } from 'react-router-dom'
+import { Bell, Plus } from 'lucide-react'
 import { useUser } from '../hooks/useUser'
 
 const FONT_PLAYFAIR = { fontFamily: '"Playfair Display", serif' }
 
-function IconBell(props) {
-  return (
-    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.75" aria-hidden {...props}>
-      <path d="M18 8a6 6 0 1 0-12 0c0 7-3 7-3 7h18s-3 0-3-7" strokeLinejoin="round" />
-      <path d="M13.73 21a2 2 0 0 1-3.46 0" strokeLinecap="round" />
-    </svg>
-  )
-}
-
 /**
- * Barre supérieure : titre + date, actions.
+ * Barre supérieure admin : titre + date, nouvelle agence, notifications.
  */
 export default function TopBar({ title }) {
-  const { user } = useUser()
+  const { user, role } = useUser()
+  const isAdmin = role === 'admin'
 
   const dateLabel = useMemo(() => {
     return new Intl.DateTimeFormat('fr-FR', {
@@ -45,18 +39,21 @@ export default function TopBar({ title }) {
       </div>
 
       <div className="flex shrink-0 items-center gap-3">
-        <button
-          type="button"
-          className="cursor-pointer rounded-lg bg-[#D97B00] px-3 py-1.5 text-xs font-medium text-white shadow-sm transition hover:bg-[#c26a00] active:scale-[0.98]"
-        >
-          Nouvelle agence
-        </button>
+        {isAdmin ? (
+          <Link
+            to="/admin/agences/new"
+            className="inline-flex cursor-pointer items-center gap-2 rounded-lg bg-[#D97B00] px-3 py-1.5 text-xs font-medium text-white shadow-sm transition hover:bg-[#c26a00] active:scale-[0.98]"
+          >
+            <Plus className="h-4 w-4" strokeWidth={2} aria-hidden />
+            Nouvelle agence
+          </Link>
+        ) : null}
         <button
           type="button"
           className="relative mr-2 cursor-pointer rounded-lg p-2 text-gray-600 transition hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
           aria-label="Notifications"
         >
-          <IconBell />
+          <Bell className="h-5 w-5" strokeWidth={1.75} aria-hidden />
           <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-[#D97B00] ring-2 ring-white dark:ring-gray-900" />
         </button>
       </div>

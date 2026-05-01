@@ -115,7 +115,7 @@ export default function DashboardPage() {
             Bonjour, {nomAdmin}
           </h1>
           <p className="mt-2 max-w-xl text-sm leading-relaxed text-white/80 md:text-base">
-            Voici un aperçu de l&apos;activité de la plateforme ImmoCI aujourd&apos;hui.
+            Voici un aperçu de l&apos;activité de la plateforme Nestymo aujourd&apos;hui.
           </p>
         </div>
         <div

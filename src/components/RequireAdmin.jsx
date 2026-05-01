@@ -2,10 +2,10 @@ import { Navigate } from 'react-router-dom'
 import { useUser } from '../hooks/useUser'
 
 /**
- * Protège une route : uniquement les utilisateurs avec rôle admin.
+ * Réserve le contenu aux comptes avec rôle admin (actif côté métier : vérifié ailleurs si besoin).
  */
-export default function PrivateRoute({ children }) {
-  const { user, role, loading } = useUser()
+export default function RequireAdmin({ children }) {
+  const { role, loading } = useUser()
 
   if (loading) {
     return (
@@ -18,8 +18,8 @@ export default function PrivateRoute({ children }) {
     )
   }
 
-  if (!user || role !== 'admin') {
-    return <Navigate to="/login" replace />
+  if (role !== 'admin') {
+    return <Navigate to="/agence/dashboard" replace />
   }
 
   return children

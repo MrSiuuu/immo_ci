@@ -448,7 +448,7 @@ export default function ParametresPage() {
           Paramètres
         </h1>
         <p className="mt-1 text-sm text-[#0F1923]/65 dark:text-slate-400">
-          Compte et données de référence ImmoCI.
+          Compte et données de référence Nestymo.
         </p>
       </header>
 

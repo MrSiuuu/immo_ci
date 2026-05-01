@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
+import { useUser } from '../../hooks/useUser.js'
 
 const FONT_PLAYFAIR = { fontFamily: '"Playfair Display", serif' }
 
@@ -43,6 +44,11 @@ function labelTransaction(t) {
   if (!t) return '—'
   const map = { louer: 'Louer', vendre: 'Vendre', bail: 'Bail' }
   return map[t] ?? t
+}
+
+function thirtyMinutesAgoIso() {
+  const now = Date.now()
+  return new Date(now - 30 * 60 * 1000).toISOString()
 }
 
 function StatutBadge({ statut }) {
@@ -157,6 +163,8 @@ function TableSkeleton() {
 
 export default function AnnoncesPage() {
   const navigate = useNavigate()
+  const { role, agenceId, user } = useUser()
+  const routeBase = role === 'agent' ? '/agence' : '/admin'
   const [rows, setRows] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -171,7 +179,7 @@ export default function AnnoncesPage() {
       setLoading(true)
       setError(null)
 
-      const { data, error: err } = await supabase
+      let q = supabase
         .from('annonces')
         .select(
           `
@@ -183,6 +191,12 @@ export default function AnnoncesPage() {
   `,
         )
         .order('created_at', { ascending: false })
+
+      if (role === 'agent' && agenceId) {
+        q = q.eq('agence_id', agenceId)
+      }
+
+      const { data, error: err } = await q
 
       if (cancelled) return
 
@@ -202,7 +216,7 @@ export default function AnnoncesPage() {
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [role, agenceId])
 
   const filtered = useMemo(() => {
     return rows.filter((a) => {
@@ -221,6 +235,30 @@ export default function AnnoncesPage() {
     })
   }, [rows, search, filtreStatut, filtreTransaction])
 
+  async function enregistrerClic(annonceId) {
+    if (!annonceId) return
+    if (!user?.id) {
+      await supabase.from('clics').insert({ annonce_id: annonceId, user_id: null })
+      return
+    }
+    const since = thirtyMinutesAgoIso()
+    const { data } = await supabase
+      .from('clics')
+      .select('id')
+      .eq('annonce_id', annonceId)
+      .eq('user_id', user.id)
+      .gte('created_at', since)
+      .limit(1)
+    if ((data ?? []).length === 0) {
+      await supabase.from('clics').insert({ annonce_id: annonceId, user_id: user.id })
+    }
+  }
+
+  async function openDetail(annonceId) {
+    await enregistrerClic(annonceId)
+    navigate(`${routeBase}/annonces/${annonceId}`)
+  }
+
   return (
     <div className="mx-auto max-w-7xl text-[#0F1923] dark:text-slate-100">
       <header className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
@@ -237,7 +275,7 @@ export default function AnnoncesPage() {
         </div>
         <button
           type="button"
-          onClick={() => navigate('/admin/annonces/new')}
+          onClick={() => navigate(`${routeBase}/annonces/new`)}
           className="cursor-pointer self-start rounded-lg bg-[#D97B00] px-4 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-[#c26a00] sm:self-auto"
         >
           Nouvelle annonce
@@ -306,11 +344,11 @@ export default function AnnoncesPage() {
                   key={a.id}
                   role="button"
                   tabIndex={0}
-                  onClick={() => navigate(`/admin/annonces/${a.id}/edit`)}
+                  onClick={() => openDetail(a.id)}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter' || e.key === ' ') {
                       e.preventDefault()
-                      navigate(`/admin/annonces/${a.id}/edit`)
+                      openDetail(a.id)
                     }
                   }}
                   className="cursor-pointer border-b border-[#E8E3D8] transition hover:bg-[#FAF6EF]/90 dark:border-slate-700 dark:hover:bg-slate-800/80"
