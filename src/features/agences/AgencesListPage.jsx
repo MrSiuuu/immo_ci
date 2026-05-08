@@ -1,9 +1,18 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { ChevronLeft, ChevronRight, Eye, Search } from 'lucide-react'
-import { getAgentCountsByAgenceIds, getAllAgences } from './agencesService.js'
+import { ChevronLeft, ChevronRight, Eye, Info, Search } from 'lucide-react'
+import { supabase } from '../../lib/supabase'
+import { getAgentCountsByAgenceIds, getAllAgences, setStatutAgence, setVerificationStatus } from './agencesService.js'
+import { displayOrDash } from '../../lib/displayOrDash'
 
 const PAGE_SIZE = 10
+const QUICK_FILTERS = [
+  { id: 'all', label: 'Toutes' },
+  { id: 'active', label: 'Actives' },
+  { id: 'pending', label: 'En attente' },
+  { id: 'suspendue', label: 'Suspendues' },
+  { id: 'mclu_ok', label: 'MCLU vérifié' },
+]
 
 function BadgeCompteAgent({ count }) {
   const ok = count > 0
@@ -24,10 +33,12 @@ function BadgeCompteAgent({ count }) {
 export default function AgencesListPage() {
   const [rows, setRows] = useState([])
   const [counts, setCounts] = useState({})
+  const [enriched, setEnriched] = useState({})
   const [page, setPage] = useState(1)
   const [total, setTotal] = useState(0)
   const [searchInput, setSearchInput] = useState('')
   const [search, setSearch] = useState('')
+  const [quick, setQuick] = useState('all')
   const [loading, setLoading] = useState(true)
   const [err, setErr] = useState(null)
 
@@ -50,15 +61,46 @@ export default function AgencesListPage() {
       if (error) {
         setErr(error)
       }
-      setRows(data)
+      let nextRows = data
+      if (quick === 'active') nextRows = nextRows.filter((r) => r.statut === 'active')
+      if (quick === 'pending') nextRows = nextRows.filter((r) => r.verification_status === 'pending')
+      if (quick === 'suspendue') nextRows = nextRows.filter((r) => r.statut === 'suspendue')
+      if (quick === 'mclu_ok') nextRows = nextRows.filter((r) => r.verification_status === 'verified')
+      setRows(nextRows)
       setCounts(c)
       setTotal(count ?? 0)
+
+      const agenceIds = nextRows.map((r) => r.id)
+      if (agenceIds.length > 0) {
+        const thisMonthStart = new Date()
+        thisMonthStart.setDate(1)
+        thisMonthStart.setHours(0, 0, 0, 0)
+        const [abos, annonces, leads] = await Promise.all([
+          supabase.from('abonnements').select('agence_id, plan, created_at').in('agence_id', agenceIds).order('created_at', { ascending: false }),
+          supabase.from('annonces').select('agence_id, statut').in('agence_id', agenceIds).eq('statut', 'publie'),
+          supabase.from('contacts').select('agence_id, created_at').in('agence_id', agenceIds).gte('created_at', thisMonthStart.toISOString()),
+        ])
+        const byAgence = {}
+        for (const id of agenceIds) byAgence[id] = { forfait: 'Starter', annoncesActives: 0, leadsMois: 0 }
+        for (const a of abos.data ?? []) {
+          if (byAgence[a.agence_id] && byAgence[a.agence_id].forfait === 'Starter') byAgence[a.agence_id].forfait = a.plan
+        }
+        for (const a of annonces.data ?? []) {
+          if (byAgence[a.agence_id]) byAgence[a.agence_id].annoncesActives += 1
+        }
+        for (const l of leads.data ?? []) {
+          if (byAgence[l.agence_id]) byAgence[l.agence_id].leadsMois += 1
+        }
+        setEnriched(byAgence)
+      } else {
+        setEnriched({})
+      }
     } catch (e) {
       setErr(e?.message ?? 'Chargement impossible.')
     } finally {
       setLoading(false)
     }
-  }, [page, search])
+  }, [page, search, quick])
 
   useEffect(() => {
     load()
@@ -71,7 +113,7 @@ export default function AgencesListPage() {
       return { label: 'Suspendue', className: 'bg-[#1F2937] text-[#F9FAFB]' }
     }
     if (verificationStatus === 'verified') {
-      return { label: 'Partenaire vérifié', className: 'bg-[#D1FAE5] text-[#065F46]' }
+      return { label: 'Vérifié', className: 'bg-[#D1FAE5] text-[#065F46]' }
     }
     if (verificationStatus === 'rejected') {
       return { label: 'Refusée', className: 'bg-[#FEE2E2] text-[#991B1B]' }
@@ -120,6 +162,54 @@ export default function AgencesListPage() {
         />
       </div>
 
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex flex-wrap gap-2">
+          {QUICK_FILTERS.map((f) => (
+            <button
+              key={f.id}
+              type="button"
+              onClick={() => {
+                setQuick(f.id)
+                setPage(1)
+              }}
+              className={`rounded-full px-3 py-1.5 text-xs ${
+                quick === f.id ? 'bg-[#E02020] text-white' : 'border border-[#E5E7EB] bg-white text-[#111111]'
+              }`}
+            >
+              {f.label}
+            </button>
+          ))}
+        </div>
+        <button
+          type="button"
+          onClick={() => {
+            const headers = ['Nom', 'Email', 'Statut', 'Verification', 'Forfait', 'Annonces actives', 'Leads mois']
+            const lines = rows.map((r) =>
+              [
+                `"${String(r.nom ?? '').replaceAll('"', '""')}"`,
+                `"${String(r.email ?? '').replaceAll('"', '""')}"`,
+                r.statut ?? '',
+                r.verification_status ?? '',
+                enriched[r.id]?.forfait ?? 'Starter',
+                enriched[r.id]?.annoncesActives ?? 0,
+                enriched[r.id]?.leadsMois ?? 0,
+              ].join(','),
+            )
+            const csv = [headers.join(','), ...lines].join('\n')
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+            const url = URL.createObjectURL(blob)
+            const link = document.createElement('a')
+            link.href = url
+            link.download = `agences_${Date.now()}.csv`
+            link.click()
+            URL.revokeObjectURL(url)
+          }}
+          className="rounded-full border border-[#E02020] px-3 py-1.5 text-xs text-[#E02020]"
+        >
+          Export CSV
+        </button>
+      </div>
+
       {err && (
         <p
           className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800 dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-200"
@@ -131,12 +221,27 @@ export default function AgencesListPage() {
 
       <div className="overflow-hidden rounded-2xl border border-[#E8E3D8] bg-white shadow-sm dark:border-slate-700 dark:bg-slate-900">
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-[#E8E3D8] text-sm dark:divide-slate-700">
+          <table className="min-w-full divide-y divide-[#E8E3D8] text-xs dark:divide-slate-700">
             <thead className="bg-[#FAF6EF] dark:bg-slate-800/80">
               <tr>
+                <th className="px-4 py-3 text-left font-semibold text-[#0F1923] dark:text-slate-200">Logo</th>
                 <th className="px-4 py-3 text-left font-semibold text-[#0F1923] dark:text-slate-200">Nom</th>
                 <th className="px-4 py-3 text-left font-semibold text-[#0F1923] dark:text-slate-200">Email</th>
                 <th className="px-4 py-3 text-left font-semibold text-[#0F1923] dark:text-slate-200">Statut</th>
+                <th className="px-4 py-3 text-left font-semibold text-[#0F1923] dark:text-slate-200">Forfait</th>
+                <th className="px-4 py-3 text-left font-semibold text-[#0F1923] dark:text-slate-200">
+                  <span className="group relative inline-flex items-center gap-1">
+                    MCLU
+                    <Info
+                      className="h-3.5 w-3.5 text-[#6B7280]"
+                    />
+                    <span className="pointer-events-none absolute left-5 top-full z-20 mt-2 hidden w-72 rounded-md bg-[#111111] px-2.5 py-2 text-[11px] font-normal leading-snug text-white shadow-lg group-hover:block">
+                      Ministère de la Construction et du Logement Urbain - certification officielle des agences immobilières en Côte d'Ivoire
+                    </span>
+                  </span>
+                </th>
+                <th className="px-4 py-3 text-left font-semibold text-[#0F1923] dark:text-slate-200">Annonces actives</th>
+                <th className="px-4 py-3 text-left font-semibold text-[#0F1923] dark:text-slate-200">Leads ce mois</th>
                 <th className="px-4 py-3 text-left font-semibold text-[#0F1923] dark:text-slate-200">Compte</th>
                 <th className="px-4 py-3 text-left font-semibold text-[#0F1923] dark:text-slate-200">Date</th>
                 <th className="px-4 py-3 text-right font-semibold text-[#0F1923] dark:text-slate-200">Actions</th>
@@ -145,12 +250,21 @@ export default function AgencesListPage() {
             <tbody className="divide-y divide-[#E8E3D8] dark:divide-slate-700">
               {rows.map((a) => {
                 const n = counts[a.id] ?? 0
-                const d = a.created_at ? new Date(a.created_at).toLocaleDateString('fr-FR') : '—'
+                const d = a.created_at ? new Date(a.created_at).toLocaleDateString('fr-FR') : '-'
                 const statusBadge = badgeContext(a.verification_status, a.statut)
                 return (
                   <tr key={a.id} className="hover:bg-[#FAF6EF]/50 dark:hover:bg-slate-800/40">
+                    <td className="px-4 py-3">
+                      {a.logo_url ? (
+                        <img src={a.logo_url} alt={a.nom} className="h-10 w-10 rounded-full object-cover" />
+                      ) : (
+                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#E02020] text-xs font-semibold text-white">
+                          {(a.nom ?? '').slice(0, 2).toUpperCase() || 'AG'}
+                        </div>
+                      )}
+                    </td>
                     <td className="px-4 py-3 font-medium text-[#0F1923] dark:text-slate-100">{a.nom}</td>
-                    <td className="px-4 py-3 text-[#0F1923]/80 dark:text-slate-300">{a.email ?? '—'}</td>
+                    <td className="px-4 py-3 text-[#0F1923]/80 dark:text-slate-300">{displayOrDash(a.email)}</td>
                     <td className="px-4 py-3">
                       <span
                         className={`inline-flex rounded-full px-3 py-1 text-xs font-medium ${statusBadge.className}`}
@@ -158,6 +272,19 @@ export default function AgencesListPage() {
                         {statusBadge.label}
                       </span>
                     </td>
+                    <td className="px-4 py-3">
+                      <span className="rounded-full bg-[#F3F4F6] px-2 py-0.5 text-xs font-medium text-[#374151]">
+                        {enriched[a.id]?.forfait ?? 'Starter'}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs ${a.verification_status === 'verified' ? 'bg-[#E1F5EE] text-[#0F6E56]' : 'bg-[#F3F4F6] text-[#6B7280]'}`}>
+                        <span className={`h-1.5 w-1.5 rounded-full ${a.verification_status === 'verified' ? 'bg-[#10B981]' : 'bg-[#9CA3AF]'}`} />
+                        {a.verification_status === 'verified' ? 'Vérifié' : 'Non vérifié'}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 font-semibold text-[#111111]">{enriched[a.id]?.annoncesActives ?? 0}</td>
+                    <td className="px-4 py-3 font-semibold text-[#111111]">{enriched[a.id]?.leadsMois ?? 0}</td>
                     <td className="px-4 py-3">
                       <BadgeCompteAgent count={n} />
                     </td>
@@ -171,6 +298,31 @@ export default function AgencesListPage() {
                           <Eye className="h-3.5 w-3.5" />
                           Voir
                         </Link>
+                        {a.verification_status === 'pending' ? (
+                          <>
+                            <button
+                              type="button"
+                              onClick={async () => {
+                                await setVerificationStatus(a.id, 'verified')
+                                await setStatutAgence(a.id, 'active')
+                                await load()
+                              }}
+                              className="rounded-lg border border-[#1D9E75] px-3 py-1.5 text-xs font-medium text-[#1D9E75]"
+                            >
+                              Activer
+                            </button>
+                            <button
+                              type="button"
+                              onClick={async () => {
+                                await setVerificationStatus(a.id, 'rejected')
+                                await load()
+                              }}
+                              className="rounded-lg border border-[#C0392B] px-3 py-1.5 text-xs font-medium text-[#C0392B]"
+                            >
+                              Refuser
+                            </button>
+                          </>
+                        ) : null}
                       </div>
                     </td>
                   </tr>
@@ -186,7 +338,7 @@ export default function AgencesListPage() {
 
       <div className="mt-4 flex flex-wrap items-center justify-between gap-3 text-sm text-[#6B7280]">
         <p>
-          Page {page} sur {totalPages} — {total} agences au total
+          Page {page} sur {totalPages} - {total} agences au total
         </p>
         <div className="flex items-center gap-2">
           <button

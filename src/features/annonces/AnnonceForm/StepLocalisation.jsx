@@ -27,7 +27,7 @@ function MapClickHandler({ onPick }) {
 }
 
 /**
- * Étape 4 — Carte Leaflet : clic pour placer le marqueur (optionnel).
+ * Étape 4 - Carte Leaflet : clic pour placer le marqueur (optionnel).
  */
 export default function StepLocalisation({ formData, setFormData, onNext, onPrev }) {
   const position = useMemo(() => {

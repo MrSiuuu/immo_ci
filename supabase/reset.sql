@@ -1,6 +1,6 @@
 -- Suppression du trigger sur auth (schéma toujours présent sous Supabase).
 -- Les triggers sur public.annonces / public.alertes sont retirés automatiquement
--- par DROP TABLE ... CASCADE — ne pas les DROP ici : PostgreSQL exige que la
+-- par DROP TABLE ... CASCADE - ne pas les DROP ici : PostgreSQL exige que la
 -- table existe pour « DROP TRIGGER … ON table », ce qui casse si la table
 -- n’a jamais été créée ou est déjà supprimée.
 DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;

@@ -1,5 +1,5 @@
 -- =============================================================================
--- Olivier Immo — Schéma Supabase (PostgreSQL)
+-- Olivier Immo - Schéma Supabase (PostgreSQL)
 -- Profils liés à auth.users (trigger on_auth_user_created), user_id nullable
 -- où convenu, pas d'historique_vues, boosts = source de vérité (pas de is_boosted
 -- sur annonces), logs.details en jsonb. Vues/clics : anti-usurpation user_id (RLS).
@@ -70,6 +70,9 @@ CREATE TABLE public.agences (
   telephone   text,
   whatsapp    text,
   email       text,
+  show_phone  boolean NOT NULL DEFAULT true,
+  show_email  boolean NOT NULL DEFAULT true,
+  show_whatsapp boolean NOT NULL DEFAULT true,
   site_web    text,
   statut      public.agence_statut NOT NULL DEFAULT 'active',
   verification_status text NOT NULL DEFAULT 'pending'
@@ -86,6 +89,7 @@ CREATE TABLE public.users (
   telephone  text,
   initiales  text,
   role       public.user_role NOT NULL DEFAULT 'user',
+  is_owner   boolean NOT NULL DEFAULT false,
   statut     public.user_statut NOT NULL DEFAULT 'actif',
   agence_id  uuid REFERENCES public.agences(id) ON DELETE SET NULL,
   must_change_password boolean NOT NULL DEFAULT false,
@@ -114,6 +118,7 @@ CREATE TABLE public.annonces (
   longitude        double precision,
   statut           public.annonce_statut NOT NULL DEFAULT 'brouillon',
   agence_id        uuid NOT NULL REFERENCES public.agences (id) ON DELETE CASCADE,
+  created_by       uuid REFERENCES public.users (id) ON DELETE SET NULL,
   created_at       timestamptz NOT NULL DEFAULT now(),
   updated_at       timestamptz NOT NULL DEFAULT now(),
   "transaction"    text CHECK ("transaction" IN ('louer', 'vendre', 'bail')),

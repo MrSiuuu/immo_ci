@@ -2,7 +2,7 @@ import { createElement, useCallback, useEffect, useState } from 'react'
 import { Building2, Image, KeyRound, MapPin, Phone } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { useUser } from '../../hooks/useUser'
-import { updateAgenceInfos } from '../../features/agences/agencesService.js'
+import { setStatutAgent, updateAgenceInfos } from '../../features/agences/agencesService.js'
 
 const FONT_INTER = { fontFamily: '"Inter", sans-serif' }
 
@@ -26,10 +26,10 @@ function Section({ icon, title, children }) {
 }
 
 /**
- * Paramètres agence — champs autorisés + changement de mot de passe.
+ * Paramètres agence - champs autorisés + changement de mot de passe.
  */
 export default function AgentParametresPage() {
-  const { user, agenceId, agence, refreshProfile } = useUser()
+  const { user, agenceId, agence, isOwner, refreshProfile } = useUser()
   const [villes, setVilles] = useState([])
   const [quartiers, setQuartiers] = useState([])
   const [nom, setNom] = useState('')
@@ -49,6 +49,10 @@ export default function AgentParametresPage() {
   const [toast, setToast] = useState(null)
   const [formErr, setFormErr] = useState(null)
   const [fieldErrs, setFieldErrs] = useState({})
+  const [comptesAgence, setComptesAgence] = useState([])
+  const [showPhone, setShowPhone] = useState(true)
+  const [showEmail, setShowEmail] = useState(true)
+  const [showWhatsapp, setShowWhatsapp] = useState(true)
 
   useEffect(() => {
     if (!agence) return
@@ -62,7 +66,25 @@ export default function AgentParametresPage() {
     setVilleId(agence.ville_id != null ? String(agence.ville_id) : '')
     setQuartier(agence.quartier ?? '')
     setLogoUrl(agence.logo_url ?? agence.logo ?? '')
+    setShowPhone(agence.show_phone !== false)
+    setShowEmail(agence.show_email !== false)
+    setShowWhatsapp(agence.show_whatsapp !== false)
   }, [agence])
+
+  useEffect(() => {
+    let mounted = true
+    ;(async () => {
+      if (!agenceId || !isOwner) {
+        setComptesAgence([])
+        return
+      }
+      const { data } = await supabase.from('users').select('id, nom, prenom, email, statut, is_owner, created_at').eq('agence_id', agenceId).order('created_at', { ascending: true })
+      if (mounted) setComptesAgence(data ?? [])
+    })()
+    return () => {
+      mounted = false
+    }
+  }, [agenceId, isOwner])
 
   useEffect(() => {
     let mounted = true
@@ -237,6 +259,56 @@ export default function AgentParametresPage() {
     showToast('success', 'Mot de passe mis à jour.')
   }
 
+  async function handleOwnerCredentials(e) {
+    e.preventDefault()
+    setFormErr(null)
+    if (!email.trim()) {
+      setFormErr('Veuillez renseigner le nouvel email.')
+      return
+    }
+    const { error } = await supabase.auth.updateUser({ email: email.trim() })
+    if (error) {
+      showToast('error', error.message ?? 'Mise à jour email impossible.')
+      return
+    }
+    showToast('success', 'Email de connexion mis à jour. Un email de confirmation a été envoyé.')
+  }
+
+  async function toggleCoord(field, value) {
+    if (!agenceId) return
+    const { error } = await updateAgenceInfos(agenceId, { [field]: value })
+    if (error) {
+      showToast('error', error.message ?? 'Mise à jour impossible.')
+      return
+    }
+    showToast('success', 'Coordonnée publique mise à jour.')
+    await refreshProfile()
+  }
+
+  if (!isOwner) {
+    return (
+      <div className="mx-auto max-w-3xl space-y-6 pb-8 text-[#0F1923]">
+        <header>
+          <h1 className="text-2xl font-semibold tracking-tight" style={FONT_INTER}>Paramètres</h1>
+          <p className="mt-1 text-sm text-[#666666]">Compte secondaire : vous pouvez uniquement modifier vos identifiants.</p>
+        </header>
+        {formErr ? <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">{formErr}</p> : null}
+        <form onSubmit={handleOwnerCredentials} className="space-y-4 rounded-2xl border border-[#E8E3D8] bg-white p-6">
+          <label className={labelClass} htmlFor="agent-login-email">Modifier mon adresse email de connexion</label>
+          <input id="agent-login-email" type="email" className={inputClass} value={email} onChange={(e) => setEmail(e.target.value)} />
+          <p className="text-xs text-[#666666]">Un email de confirmation sera envoyé après mise à jour.</p>
+          <button type="submit" className="rounded-full bg-[#E02020] px-4 py-2 text-sm text-white">Mettre à jour l&apos;email</button>
+        </form>
+        <form onSubmit={handlePassword} className="space-y-4 rounded-2xl border border-[#E8E3D8] bg-white p-6">
+          <label className={labelClass} htmlFor="ap-pn">Modifier mon mot de passe</label>
+          <input id="ap-pn" type="password" minLength={8} className={inputClass} value={pwdNew} onChange={(e) => setPwdNew(e.target.value)} />
+          <input id="ap-p2" type="password" className={inputClass} value={pwdConfirm} onChange={(e) => setPwdConfirm(e.target.value)} placeholder="Confirmer le mot de passe" />
+          <button type="submit" className="rounded-full bg-[#111111] px-4 py-2 text-sm text-white">Mettre à jour le mot de passe</button>
+        </form>
+      </div>
+    )
+  }
+
   return (
     <div className="mx-auto max-w-3xl space-y-8 pb-8 text-[#0F1923] dark:text-slate-100">
       <header>
@@ -396,8 +468,49 @@ export default function AgentParametresPage() {
               onChange={handleLogoChange}
               disabled={pending}
             />
-            <p className="mt-1 text-xs text-[#0F1923]/50 dark:text-slate-500">JPG, PNG ou WEBP — max 2 Mo.</p>
+            <p className="mt-1 text-xs text-[#0F1923]/50 dark:text-slate-500">JPG, PNG ou WEBP - max 2 Mo.</p>
           </div>
+        </Section>
+
+        <Section icon={Phone} title="Coordonnées publiques">
+          <label className="flex items-center justify-between rounded-lg border border-[#E5E5E5] px-3 py-2">
+            <span>Afficher téléphone</span>
+            <input type="checkbox" checked={showPhone} onChange={(e) => { setShowPhone(e.target.checked); toggleCoord('show_phone', e.target.checked) }} />
+          </label>
+          <label className="flex items-center justify-between rounded-lg border border-[#E5E5E5] px-3 py-2">
+            <span>Afficher email</span>
+            <input type="checkbox" checked={showEmail} onChange={(e) => { setShowEmail(e.target.checked); toggleCoord('show_email', e.target.checked) }} />
+          </label>
+          <label className="flex items-center justify-between rounded-lg border border-[#E5E5E5] px-3 py-2">
+            <span>Afficher WhatsApp</span>
+            <input type="checkbox" checked={showWhatsapp} onChange={(e) => { setShowWhatsapp(e.target.checked); toggleCoord('show_whatsapp', e.target.checked) }} />
+          </label>
+        </Section>
+
+        <Section icon={Building2} title="Comptes de l'agence">
+          <ul className="space-y-2">
+            {comptesAgence.map((c) => (
+              <li key={c.id} className="flex items-center justify-between rounded-lg border border-[#E5E5E5] px-3 py-2">
+                <div>
+                  <p className="text-sm font-medium text-[#111111]">{[c.prenom, c.nom].filter(Boolean).join(' ') || c.email}</p>
+                  <p className="text-xs text-[#666666]">{c.email} · {c.statut}</p>
+                </div>
+                {!c.is_owner ? (
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      await setStatutAgent(c.id, c.statut === 'actif' ? 'suspendu' : 'actif')
+                      const { data } = await supabase.from('users').select('id, nom, prenom, email, statut, is_owner, created_at').eq('agence_id', agenceId).order('created_at', { ascending: true })
+                      setComptesAgence(data ?? [])
+                    }}
+                    className="rounded-lg border border-[#E02020] px-3 py-1.5 text-xs text-[#E02020]"
+                  >
+                    {c.statut === 'actif' ? 'Suspendre' : 'Réactiver'}
+                  </button>
+                ) : null}
+              </li>
+            ))}
+          </ul>
         </Section>
       </form>
 

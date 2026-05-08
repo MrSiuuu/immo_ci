@@ -3,7 +3,7 @@ import { useCallback, useRef, useState } from 'react'
 const ACCEPT = ['image/jpeg', 'image/png', 'image/webp']
 
 /**
- * Compresse l'image (max 1920x1080, qualité 0.85) via Canvas — sans lib externe.
+ * Compresse l'image (max 1920x1080, qualité 0.85) via Canvas - sans lib externe.
  */
 function compressImage(file) {
   return new Promise((resolve, reject) => {
@@ -48,7 +48,7 @@ function compressImage(file) {
 }
 
 /**
- * Étape 3 — Photos : compression, grille, réordonnancement drag & drop.
+ * Étape 3 - Photos : compression, grille, réordonnancement drag & drop.
  */
 export default function StepPhotos({ formData, setFormData, onNext, onPrev }) {
   const inputRef = useRef(null)
@@ -199,7 +199,7 @@ export default function StepPhotos({ formData, setFormData, onNext, onPrev }) {
           onChange={onFileInput}
         />
         <p className="mt-2 text-xs text-gray-500 dark:text-slate-400">
-          JPEG, PNG ou WebP — redimensionnement automatique
+          JPEG, PNG ou WebP - redimensionnement automatique
         </p>
       </div>
 

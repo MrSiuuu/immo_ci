@@ -90,7 +90,7 @@ export async function getAgenceById(id) {
 export async function getAgentsParAgence(agence_id) {
   const { data, error } = await supabase
     .from('users')
-    .select('id, email, nom, prenom, statut, must_change_password, created_at')
+    .select('id, email, nom, prenom, statut, must_change_password, created_at, is_owner')
     .eq('agence_id', agence_id)
     .eq('role', 'agent')
     .order('created_at', { ascending: false })
@@ -154,7 +154,7 @@ const CHAMPS_AGENCE_AGENT = new Set([
 ])
 
 /**
- * Mise à jour des infos agence par un agent — champs sensibles exclus côté client.
+ * Mise à jour des infos agence par un agent - champs sensibles exclus côté client.
  */
 export async function updateAgenceInfos(agenceId, donnees) {
   const donneesFiltreesRaw = Object.fromEntries(
@@ -192,7 +192,7 @@ export async function creerCompteAgent({ email, password, agence_id, nom, prenom
     if (refErr || !ref.session?.access_token) {
       return {
         success: false,
-        error: 'Session expirée — déconnectez-vous et reconnectez-vous en tant qu’admin.',
+        error: 'Session expirée - déconnectez-vous et reconnectez-vous en tant qu’admin.',
       }
     }
     session = ref.session

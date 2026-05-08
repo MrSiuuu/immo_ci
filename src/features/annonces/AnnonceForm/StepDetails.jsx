@@ -25,7 +25,7 @@ const EQUIPEMENT_KEYS_DEDICATED = new Set([
 ])
 
 /**
- * Étape 2 — Détails du bien et équipements (checkboxes).
+ * Étape 2 - Détails du bien et équipements (checkboxes).
  */
 export default function StepDetails({ formData, setFormData, typeBienNom, onNext, onPrev }) {
   const [fieldErrors, setFieldErrors] = useState({})
@@ -145,7 +145,7 @@ export default function StepDetails({ formData, setFormData, typeBienNom, onNext
             onChange={(e) => setEquipementValue(key, e.target.value)}
             className={`${inputClass} ${fieldErrors[key] ? inputErrorClass : ''}`}
           >
-            <option value="">— Choisir —</option>
+            <option value="">- Choisir -</option>
             {def.options.map((opt) => (
               <option key={opt.value} value={opt.value}>
                 {opt.label}
@@ -283,7 +283,7 @@ export default function StepDetails({ formData, setFormData, typeBienNom, onNext
             onChange={(e) => setEquipementValue('usage_commercial', e.target.value)}
             className={`${inputClass} ${fieldErrors.usage_commercial ? inputErrorClass : ''}`}
           >
-            <option value="">— Choisir —</option>
+            <option value="">- Choisir -</option>
             {EQUIPEMENT_DEFINITIONS.usage_commercial.options.map((opt) => (
               <option key={opt.value} value={opt.value}>
                 {opt.label}

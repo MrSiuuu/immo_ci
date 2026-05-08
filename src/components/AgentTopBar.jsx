@@ -4,7 +4,7 @@ import { Plus } from 'lucide-react'
 const FONT_INTER = { fontFamily: '"Inter", sans-serif' }
 
 /**
- * Barre supérieure — espace agent (titre + nouvelle annonce).
+ * Barre supérieure - espace agent (titre + nouvelle annonce).
  */
 export default function AgentTopBar({ title }) {
   const navigate = useNavigate()

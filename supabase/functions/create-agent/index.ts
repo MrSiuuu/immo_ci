@@ -84,6 +84,21 @@ serve(async (req) => {
       })
     }
 
+    const { count: existingAgentsCount, error: countError } = await supabaseAdmin
+      .from('users')
+      .select('id', { count: 'exact', head: true })
+      .eq('role', 'agent')
+      .eq('agence_id', agence_id)
+
+    if (countError) {
+      return new Response(JSON.stringify({ error: countError.message }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
+
+    const isOwner = (existingAgentsCount ?? 0) === 0
+
     const { error: updateError } = await supabaseAdmin
       .from('users')
       .update({
@@ -92,6 +107,7 @@ serve(async (req) => {
         nom: nom || null,
         prenom: prenom || null,
         must_change_password: true,
+        is_owner: isOwner,
       })
       .eq('id', newUser.user.id)
 

@@ -1,6 +1,8 @@
 /**
- * Étape 5 — Récapitulatif et publication / brouillon.
+ * Étape 5 - Récapitulatif et publication / brouillon.
  */
+import { displayOrDash } from '../../../lib/displayOrDash'
+
 export default function StepConfirmation({
   formData,
   donneesRef,
@@ -13,18 +15,19 @@ export default function StepConfirmation({
   onPrev,
 }) {
   const typeNom =
-    donneesRef.typesBiens.find((t) => String(t.id) === String(formData.type_bien_id))?.nom ?? '—'
+    displayOrDash(donneesRef.typesBiens.find((t) => String(t.id) === String(formData.type_bien_id))?.nom)
   const villeNom =
-    donneesRef.villes.find((v) => String(v.id) === String(formData.ville_id))?.nom ?? '—'
+    displayOrDash(donneesRef.villes.find((v) => String(v.id) === String(formData.ville_id))?.nom)
   const quartierNom =
-    quartiers.find((q) => String(q.id) === String(formData.quartier_id))?.nom ?? '—'
+    displayOrDash(quartiers.find((q) => String(q.id) === String(formData.quartier_id))?.nom)
 
   const txLabels = { louer: 'Louer', vendre: 'Vendre', bail: 'Bail' }
   const tx = txLabels[formData.transaction] ?? formData.transaction
 
   const prixNum = Number(formData.prix)
-  const prixFormate =
-    Number.isFinite(prixNum) ? `${new Intl.NumberFormat('fr-FR').format(prixNum)} FCFA` : '—'
+  const prixFormate = Number.isFinite(prixNum)
+    ? `${new Intl.NumberFormat('fr-FR').format(prixNum)} FCFA`
+    : displayOrDash(null)
 
   const photoPrincipale = formData.photos[0]
 
@@ -45,7 +48,7 @@ export default function StepConfirmation({
 
       <ul className="space-y-2 text-sm text-[#0F1923] dark:text-slate-200">
         <li>
-          <strong className="text-[#0F1923] dark:text-slate-100">Titre :</strong> {formData.titre || '—'}
+          <strong className="text-[#0F1923] dark:text-slate-100">Titre :</strong> {displayOrDash(formData.titre)}
         </li>
         <li>
           <strong className="text-[#0F1923] dark:text-slate-100">Transaction :</strong> {tx} ·{' '}

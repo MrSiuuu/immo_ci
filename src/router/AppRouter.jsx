@@ -20,10 +20,19 @@ import AgenceDetailPage from '../features/agences/AgenceDetailPage.jsx'
 import ChangePasswordPage from '../features/auth/ChangePasswordPage.jsx'
 import OnboardingPage from '../features/auth/OnboardingPage.jsx'
 import AgentDashboardPage from '../pages/agent/AgentDashboardPage.jsx'
+import AgentAnnoncesPage from '../pages/agent/AgentAnnoncesPage.jsx'
 import AgentParametresPage from '../pages/agent/AgentParametresPage.jsx'
 import AgentStatistiquesPage from '../pages/agent/AgentStatistiquesPage.jsx'
 import AgentPlaceholderPage from '../pages/agent/AgentPlaceholderPage.jsx'
 import AnnonceDetailPage from '../pages/admin/AnnonceDetailPage.jsx'
+import StatistiquesPage from '../pages/admin/StatistiquesPage.jsx'
+import StatAnnoncesPage from '../pages/admin/StatAnnoncesPage.jsx'
+import StatAgencesPage from '../pages/admin/StatAgencesPage.jsx'
+import StatEngagementPage from '../pages/admin/StatEngagementPage.jsx'
+import StatPrixPage from '../pages/admin/StatPrixPage.jsx'
+import StatClassementsPage from '../pages/admin/StatClassementsPage.jsx'
+import StatTendancesPage from '../pages/admin/StatTendancesPage.jsx'
+import LeadsPage from '../pages/admin/LeadsPage.jsx'
 import AppartementForm from '../features/annonces/forms/AppartementForm.jsx'
 import VillaForm from '../features/annonces/forms/VillaForm.jsx'
 import DuplexForm from '../features/annonces/forms/DuplexForm.jsx'
@@ -43,14 +52,14 @@ function AdminShell({ title, children }) {
       <Sidebar />
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
         <TopBar title={title} />
-        <main className="flex-1 overflow-y-auto bg-[#FAF6EF] p-6 dark:bg-slate-950">{children}</main>
+        <main className="flex-1 overflow-y-auto bg-[#F5F7FA] p-6">{children}</main>
       </div>
     </div>
   )
 }
 
 /**
- * Formulaire annonce plein écran — annulation vers la liste selon le préfixe de route.
+ * Formulaire annonce plein écran - annulation vers la liste selon le préfixe de route.
  */
 function FormShell({ children }) {
   const navigate = useNavigate()
@@ -60,8 +69,8 @@ function FormShell({ children }) {
   const annoncesList = isAgence || role === 'agent' ? '/agence/annonces' : '/admin/annonces'
 
   return (
-    <div className="flex min-h-screen flex-col bg-[#FAF6EF] dark:bg-slate-950">
-      <header className="flex shrink-0 flex-col border-b border-[#E8E3D8] bg-[#FAF6EF] dark:border-slate-700 dark:bg-slate-950">
+    <div className="flex min-h-screen flex-col bg-[#FFFFFF]">
+      <header className="flex shrink-0 flex-col border-b border-[#E5E5E5] bg-[#FFFFFF]">
         {isAgence ? (
           <AgentStatusBanner verification_status={agence?.verification_status} statut={agence?.statut} />
         ) : null}
@@ -75,13 +84,13 @@ function FormShell({ children }) {
           <button
             type="button"
             onClick={() => navigate(annoncesList)}
-            className="rounded-full border border-[#E02020] px-4 py-2 text-sm font-medium text-[#E02020] transition hover:bg-[#E02020]/10 dark:hover:bg-[#E02020]/20"
+            className="rounded-full border border-[#E02020] px-4 py-2 text-sm font-medium text-[#E02020] transition hover:bg-[#E02020]/10"
           >
             Annuler
           </button>
         </div>
       </header>
-      <div className="mx-auto w-full max-w-3xl flex-1 px-6 py-8 dark:bg-slate-950">{children}</div>
+      <div className="mx-auto w-full max-w-3xl flex-1 px-6 py-8">{children}</div>
     </div>
   )
 }
@@ -134,7 +143,7 @@ export default function AppRouter() {
           <AuthFlowGuard>
             <AgentOnlyRoute>
               <AgentShell title="Mes annonces">
-                <AnnoncesPage />
+                <AgentAnnoncesPage />
               </AgentShell>
             </AgentOnlyRoute>
           </AuthFlowGuard>
@@ -378,31 +387,34 @@ export default function AppRouter() {
             <AdminOnlyRoute>
               <RequireAdmin>
                 <AdminShell title="Statistiques">
-                  <div className="rounded-lg bg-white p-8 shadow-sm dark:bg-gray-800 dark:text-white">
-                    Statistiques (à venir)
-                  </div>
+                  <StatistiquesPage />
                 </AdminShell>
               </RequireAdmin>
             </AdminOnlyRoute>
           </AuthFlowGuard>
         }
       />
+      <Route path="/admin/statistiques/annonces" element={<AuthFlowGuard><AdminOnlyRoute><RequireAdmin><AdminShell title="Stats annonces"><StatAnnoncesPage /></AdminShell></RequireAdmin></AdminOnlyRoute></AuthFlowGuard>} />
+      <Route path="/admin/statistiques/agences" element={<AuthFlowGuard><AdminOnlyRoute><RequireAdmin><AdminShell title="Stats agences"><StatAgencesPage /></AdminShell></RequireAdmin></AdminOnlyRoute></AuthFlowGuard>} />
+      <Route path="/admin/statistiques/engagement" element={<AuthFlowGuard><AdminOnlyRoute><RequireAdmin><AdminShell title="Stats engagement"><StatEngagementPage /></AdminShell></RequireAdmin></AdminOnlyRoute></AuthFlowGuard>} />
+      <Route path="/admin/statistiques/prix" element={<AuthFlowGuard><AdminOnlyRoute><RequireAdmin><AdminShell title="Stats prix"><StatPrixPage /></AdminShell></RequireAdmin></AdminOnlyRoute></AuthFlowGuard>} />
+      <Route path="/admin/statistiques/classements" element={<AuthFlowGuard><AdminOnlyRoute><RequireAdmin><AdminShell title="Classements"><StatClassementsPage /></AdminShell></RequireAdmin></AdminOnlyRoute></AuthFlowGuard>} />
+      <Route path="/admin/statistiques/tendances" element={<AuthFlowGuard><AdminOnlyRoute><RequireAdmin><AdminShell title="Tendances"><StatTendancesPage /></AdminShell></RequireAdmin></AdminOnlyRoute></AuthFlowGuard>} />
       <Route
-        path="/admin/contacts"
+        path="/admin/leads"
         element={
           <AuthFlowGuard>
             <AdminOnlyRoute>
               <RequireAdmin>
-                <AdminShell title="Contacts">
-                  <div className="rounded-lg bg-white p-8 shadow-sm dark:bg-gray-800 dark:text-white">
-                    Contacts (à venir)
-                  </div>
+                <AdminShell title="Leads">
+                  <LeadsPage />
                 </AdminShell>
               </RequireAdmin>
             </AdminOnlyRoute>
           </AuthFlowGuard>
         }
       />
+      <Route path="/admin/contacts" element={<Navigate to="/admin/leads" replace />} />
       <Route
         path="/admin/parametres"
         element={

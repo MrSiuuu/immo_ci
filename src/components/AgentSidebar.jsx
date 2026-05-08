@@ -10,10 +10,10 @@ const linkShell =
   'group flex cursor-pointer items-center gap-3 rounded-r-md border-l-2 px-3 py-2.5 text-sm font-medium transition-colors duration-200'
 
 const linkActive =
-  `${linkShell} ml-2 max-w-max self-start border-[#E02020] bg-[#E02020]/10 text-[#E02020]`
+  `${linkShell} ml-2 max-w-max self-start border-[#E02020] bg-[#E02020] text-white`
 
 const linkInactive =
-  `${linkShell} mx-2 w-[calc(100%-1rem)] border-transparent text-white/45 hover:bg-white/5 hover:text-white/80`
+  `${linkShell} mx-2 w-[calc(100%-1rem)] border-transparent text-[#111111]/70 hover:bg-[#F8F8F8] hover:text-[#111111]`
 
 function NavItem({ to, end, icon, children, tourId, disabled = false, badge = null }) {
   if (disabled) {
@@ -63,14 +63,14 @@ function NavItem({ to, end, icon, children, tourId, disabled = false, badge = nu
 
 function SectionLabel({ children }) {
   return (
-    <p className="mb-2 mt-6 px-4 text-[10px] font-semibold uppercase tracking-[0.12em] text-white/35 first:mt-0">
+    <p className="mb-2 mt-6 px-4 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#666666] first:mt-0">
       {children}
     </p>
   )
 }
 
 /**
- * Navigation latérale — espace agent uniquement (/agence/*).
+ * Navigation latérale - espace agent uniquement (/agence/*).
  */
 export default function AgentSidebar() {
   const { user, agence } = useUser()
@@ -83,7 +83,7 @@ export default function AgentSidebar() {
   return (
     <aside
       data-tour="agent-sidebar"
-      className="flex w-[260px] shrink-0 flex-col border-r border-white/5 bg-[#111827] text-white dark:border-white/10"
+      className="flex w-[260px] shrink-0 flex-col border-r border-[#E5E5E5] bg-[#FFFFFF] text-[#111111]"
       style={FONT_INTER}
     >
       <div className="flex items-center gap-3 p-6">
@@ -91,7 +91,7 @@ export default function AgentSidebar() {
           <LayoutDashboard className="h-5 w-5 text-white" strokeWidth={2} aria-hidden />
         </div>
         <div className="min-w-0">
-          <span className="block text-lg font-semibold leading-tight text-white" style={FONT_INTER}>
+          <span className="block text-lg font-semibold leading-tight text-[#111111]" style={FONT_INTER}>
             Nestymo
           </span>
           <span className="mt-0.5 block text-[11px] font-medium tracking-wide text-[#E02020]/70">Espace Agence</span>
@@ -125,16 +125,16 @@ export default function AgentSidebar() {
         </NavItem>
       </nav>
 
-      <div className="mt-auto border-t border-white/10 p-4 dark:border-white/5">
+      <div className="mt-auto border-t border-[#E5E5E5] p-4">
         <div className="mb-4 min-w-0">
-          <p className="truncate text-sm font-semibold text-white">{agenceNom}</p>
-          <p className="truncate text-xs text-white/50">Agent immobilier</p>
-          {user?.email ? <p className="mt-1 truncate text-[11px] text-white/40">{user.email}</p> : null}
+          <p className="truncate text-sm font-semibold text-[#111111]">{agenceNom}</p>
+          <p className="truncate text-xs text-[#666666]">Agent immobilier</p>
+          {user?.email ? <p className="mt-1 truncate text-[11px] text-[#888888]">{user.email}</p> : null}
         </div>
         <button
           type="button"
           onClick={handleLogout}
-          className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-lg border border-white/25 bg-transparent px-3 py-2.5 text-sm font-medium text-white transition-colors duration-200 hover:border-white/40 hover:bg-white/10"
+          className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-lg border border-[#E5E5E5] bg-white px-3 py-2.5 text-sm font-medium text-[#111111] transition-colors duration-200 hover:border-[#E02020] hover:text-[#E02020]"
         >
           <LogOut className="h-4 w-4 shrink-0" aria-hidden />
           Déconnexion

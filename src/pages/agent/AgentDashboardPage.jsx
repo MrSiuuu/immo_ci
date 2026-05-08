@@ -3,11 +3,12 @@ import { Building2, FileEdit, LayoutDashboard, MessageCircle } from 'lucide-reac
 import { supabase } from '../../lib/supabase'
 import { useUser } from '../../hooks/useUser'
 import AgentTutorial from '../../components/AgentTutorial.jsx'
+import { displayOrDash } from '../../lib/displayOrDash'
 
 const FONT_INTER = { fontFamily: '"Inter", sans-serif' }
 
 function formatDate(iso) {
-  if (!iso) return '—'
+  if (!iso) return displayOrDash(null)
   try {
     return new Date(iso).toLocaleDateString('fr-FR', {
       day: 'numeric',
@@ -15,12 +16,12 @@ function formatDate(iso) {
       year: 'numeric',
     })
   } catch {
-    return '—'
+    return displayOrDash(null)
   }
 }
 
 function formatPrixFcfa(prix) {
-  if (prix == null || Number.isNaN(Number(prix))) return '—'
+  if (prix == null || Number.isNaN(Number(prix))) return displayOrDash(null)
   return `${Number(prix).toLocaleString('fr-FR')} FCFA`
 }
 
@@ -34,11 +35,11 @@ function StatutBadge({ statut }) {
   if (s === 'brouillon') {
     return <span className={`${base} bg-gray-200 text-gray-700 dark:bg-gray-600 dark:text-gray-100`}>Brouillon</span>
   }
-  return <span className={`${base} bg-gray-100 text-gray-600`}>{s || '—'}</span>
+  return <span className={`${base} bg-gray-100 text-gray-600`}>{displayOrDash(s)}</span>
 }
 
 /**
- * Tableau de bord agent — stats réelles + dernières annonces + tutoriel première visite.
+ * Tableau de bord agent - stats réelles + dernières annonces + tutoriel première visite.
  */
 export default function AgentDashboardPage() {
   const { user, agence, agenceId, hasSeenTutorial, refreshProfile } = useUser()
@@ -142,7 +143,7 @@ export default function AgentDashboardPage() {
               <p className="text-xs font-medium uppercase tracking-wide text-[#0F1923]/50 dark:text-slate-400">
                 Annonces publiées
               </p>
-              <p className="text-2xl font-semibold tabular-nums">{loading ? '—' : counts.publie}</p>
+              <p className="text-2xl font-semibold tabular-nums">{loading ? displayOrDash(null) : counts.publie}</p>
             </div>
           </div>
         </div>
@@ -155,7 +156,7 @@ export default function AgentDashboardPage() {
               <p className="text-xs font-medium uppercase tracking-wide text-[#0F1923]/50 dark:text-slate-400">
                 Brouillons
               </p>
-              <p className="text-2xl font-semibold tabular-nums">{loading ? '—' : counts.brouillon}</p>
+              <p className="text-2xl font-semibold tabular-nums">{loading ? displayOrDash(null) : counts.brouillon}</p>
             </div>
           </div>
         </div>
@@ -168,7 +169,7 @@ export default function AgentDashboardPage() {
               <p className="text-xs font-medium uppercase tracking-wide text-[#0F1923]/50 dark:text-slate-400">
                 Contacts reçus
               </p>
-              <p className="text-2xl font-semibold tabular-nums">{loading ? '—' : counts.contacts}</p>
+              <p className="text-2xl font-semibold tabular-nums">{loading ? displayOrDash(null) : counts.contacts}</p>
             </div>
           </div>
         </div>
@@ -203,7 +204,7 @@ export default function AgentDashboardPage() {
               <tbody>
                 {recent.map((a) => (
                   <tr key={a.id} className="border-b border-[#E8E3D8]/80 last:border-0 dark:border-slate-700/80">
-                    <td className="py-3 pr-4 font-medium text-[#0F1923] dark:text-slate-100">{a.titre ?? '—'}</td>
+                    <td className="py-3 pr-4 font-medium text-[#0F1923] dark:text-slate-100">{displayOrDash(a.titre)}</td>
                     <td className="py-3 pr-4 tabular-nums">{formatPrixFcfa(a.prix)}</td>
                     <td className="py-3 pr-4">
                       <StatutBadge statut={a.statut} />

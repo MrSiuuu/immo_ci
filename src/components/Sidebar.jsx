@@ -1,4 +1,4 @@
-import { createElement } from 'react'
+import { createElement, useEffect, useState } from 'react'
 import { NavLink } from 'react-router-dom'
 import {
   BarChart3,
@@ -13,6 +13,7 @@ import {
 } from 'lucide-react'
 import { useUser } from '../hooks/useUser'
 import { deconnexion } from '../features/auth/authService'
+import { supabase } from '../lib/supabase'
 
 const FONT_PLAYFAIR = { fontFamily: '"Playfair Display", serif' }
 
@@ -20,10 +21,10 @@ const linkShell =
   'group flex cursor-pointer items-center gap-3 rounded-r-md border-l-2 px-3 py-2.5 text-sm font-medium transition-colors duration-200'
 
 const linkActive =
-  `${linkShell} ml-2 max-w-max self-start border-[#D97B00] bg-[#D97B00]/10 text-[#D97B00]`
+  `${linkShell} ml-2 max-w-max self-start border-[#E02020] bg-[#E02020] text-white`
 
 const linkInactive =
-  `${linkShell} mx-2 w-[calc(100%-1rem)] border-transparent text-white/45 hover:bg-white/5 hover:text-white/80`
+  `${linkShell} mx-2 w-[calc(100%-1rem)] border-transparent text-[#111111]/70 hover:bg-[#F8F8F8] hover:text-[#111111]`
 
 function NavItem({ to, end, icon, children, badge, badgeVariant = 'neutral', disabled = false, tooltip = '' }) {
   if (disabled) {
@@ -58,7 +59,7 @@ function NavItem({ to, end, icon, children, badge, badgeVariant = 'neutral', dis
           className={`ml-auto shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold tabular-nums transition-colors ${
             badgeVariant === 'danger'
               ? 'bg-red-500 text-white group-hover:bg-red-400'
-              : 'bg-white/10 text-white/90 group-hover:bg-white/15'
+              : 'bg-[#F5F5F5] text-[#111111] group-hover:bg-[#EEEEEE]'
           }`}
         >
           {badge}
@@ -70,7 +71,7 @@ function NavItem({ to, end, icon, children, badge, badgeVariant = 'neutral', dis
 
 function SectionLabel({ children }) {
   return (
-    <p className="mb-2 mt-6 px-4 text-[10px] font-semibold uppercase tracking-[0.12em] text-white/35 first:mt-0">
+    <p className="mb-2 mt-6 px-4 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#666666] first:mt-0">
       {children}
     </p>
   )
@@ -99,6 +100,7 @@ function initialsFromName(name) {
 export default function Sidebar() {
   const { user, role } = useUser()
   const isAdmin = role === 'admin'
+  const [annoncesPublieesCount, setAnnoncesPublieesCount] = useState(null)
 
   const displayName = user?.user_metadata?.full_name?.trim() || 'Olivier'
   const avatarLetters = initialsFromName(displayName)
@@ -107,20 +109,42 @@ export default function Sidebar() {
     await deconnexion()
   }
 
+  useEffect(() => {
+    let cancelled = false
+    async function loadPending() {
+      const { count } = await supabase
+        .from('annonces')
+        .select('id', { count: 'exact', head: true })
+        .eq('statut', 'en_attente_validation')
+      if (!cancelled) setAnnoncesPublieesCount(count ?? 0)
+    }
+    loadPending()
+    const channel = supabase
+      .channel('admin-annonces-badge')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'annonces' }, () => {
+        loadPending()
+      })
+      .subscribe()
+    return () => {
+      cancelled = true
+      supabase.removeChannel(channel)
+    }
+  }, [])
+
   return (
     <aside
-      className="flex w-[260px] shrink-0 flex-col border-r border-white/5 bg-[#1A1A2E] text-white dark:border-white/10"
+      className="flex w-[260px] shrink-0 flex-col border-r border-[#E5E5E5] bg-[#FFFFFF] text-[#111111]"
       style={{ fontFamily: '"DM Sans", sans-serif' }}
     >
       <div className="flex items-center gap-3 p-6">
-        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#D97B00] shadow-sm transition-transform duration-200 hover:scale-[1.02]">
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#E02020] shadow-sm transition-transform duration-200 hover:scale-[1.02]">
           <IconHome className="h-5 w-5 text-white" strokeWidth={2} />
         </div>
         <div className="min-w-0">
-          <span className="block text-lg font-semibold leading-tight text-white" style={FONT_PLAYFAIR}>
+          <span className="block text-lg font-semibold leading-tight text-[#111111]" style={FONT_PLAYFAIR}>
             Nestymo
           </span>
-          <span className="mt-0.5 block text-[11px] font-medium tracking-wide text-[#D97B00]/55">
+          <span className="mt-0.5 block text-[11px] font-medium tracking-wide text-[#E02020]/70">
             {isAdmin ? 'Espace Admin' : 'Espace Agence'}
           </span>
         </div>
@@ -131,7 +155,7 @@ export default function Sidebar() {
         <NavItem to="/admin/dashboard" end icon={LayoutDashboard}>
           <span>Tableau de bord</span>
         </NavItem>
-        <NavItem to="/admin/annonces" badge={isAdmin ? 348 : undefined} icon={Building2}>
+        <NavItem to="/admin/annonces" badge={isAdmin ? annoncesPublieesCount : undefined} icon={Building2}>
           <span>Annonces</span>
         </NavItem>
         {isAdmin ? (
@@ -140,8 +164,8 @@ export default function Sidebar() {
           </NavItem>
         ) : null}
         {isAdmin ? (
-          <NavItem to="/admin/contacts" icon={Users}>
-            <span>Contacts</span>
+          <NavItem to="/admin/leads" icon={Users}>
+            <span>Leads</span>
           </NavItem>
         ) : null}
 
@@ -187,23 +211,23 @@ export default function Sidebar() {
         </NavItem>
       </nav>
 
-      <div className="mt-auto border-t border-white/10 p-4 dark:border-white/5">
+      <div className="mt-auto border-t border-[#E5E5E5] p-4">
         <div className="mb-4 flex items-center gap-3">
           <div
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#D97B00] text-sm font-semibold text-white shadow-sm transition hover:ring-2 hover:ring-[#D97B00]/40"
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#E02020] text-sm font-semibold text-white shadow-sm transition hover:ring-2 hover:ring-[#E02020]/40"
             aria-hidden
           >
             {avatarLetters}
           </div>
           <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-semibold text-white">{displayName}</p>
-            <p className="truncate text-xs text-white/50">{isAdmin ? 'Administrateur' : 'Agent immobilier'}</p>
+            <p className="truncate text-sm font-semibold text-[#111111]">{displayName}</p>
+            <p className="truncate text-xs text-[#666666]">{isAdmin ? 'Administrateur' : 'Agent immobilier'}</p>
           </div>
         </div>
         <button
           type="button"
           onClick={handleLogout}
-          className="w-full cursor-pointer rounded-lg border border-white/25 bg-transparent px-3 py-2.5 text-sm font-medium text-white transition-colors duration-200 hover:border-white/40 hover:bg-white/10"
+          className="w-full cursor-pointer rounded-lg border border-[#E5E5E5] bg-white px-3 py-2.5 text-sm font-medium text-[#111111] transition-colors duration-200 hover:border-[#E02020] hover:text-[#E02020]"
         >
           Déconnexion
         </button>

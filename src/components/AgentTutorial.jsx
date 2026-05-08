@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Joyride, STATUS } from 'react-joyride'
 import { supabase } from '../lib/supabase'
 
@@ -8,6 +8,7 @@ import { supabase } from '../lib/supabase'
  */
 export default function AgentTutorial({ enabled, userId, refreshProfile }) {
   const [run, setRun] = useState(Boolean(enabled && userId))
+  const markedOnStartRef = useRef(false)
 
   const steps = useMemo(
     () => [
@@ -55,6 +56,12 @@ export default function AgentTutorial({ enabled, userId, refreshProfile }) {
     }
     await refreshProfile?.()
   }, [userId, refreshProfile])
+
+  useEffect(() => {
+    if (!enabled || !userId || !run || markedOnStartRef.current) return
+    markedOnStartRef.current = true
+    markSeenTutorial()
+  }, [enabled, userId, run, markSeenTutorial])
 
   if (!enabled || !userId) return null
 

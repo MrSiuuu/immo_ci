@@ -181,7 +181,7 @@ export default function AgenceFormPage() {
           className="text-xl font-semibold text-[#0F1923] dark:text-white"
           style={{ fontFamily: '"Playfair Display", serif' }}
         >
-          {recap.compteError ? 'Agence créée — compte agent en erreur' : 'Agence créée avec succès'}
+          {recap.compteError ? 'Agence créée - compte agent en erreur' : 'Agence créée avec succès'}
         </h1>
 
         {recap.compteError ? (

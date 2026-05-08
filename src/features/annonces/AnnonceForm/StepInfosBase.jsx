@@ -1,7 +1,7 @@
 import { useState } from 'react'
 
 /**
- * Étape 1 — Infos de base (titre, type, transaction, prix, agence, commune, quartier).
+ * Étape 1 - Infos de base (titre, type, transaction, prix, agence, commune, quartier).
  */
 
 const label = 'block text-sm font-medium mb-1 text-[#0F1923] dark:text-slate-200'
@@ -83,7 +83,7 @@ export default function StepInfosBase({
           }}
           className={field}
         >
-          <option value="">— Sélectionner —</option>
+          <option value="">- Sélectionner -</option>
           {donneesRef.typesBiens.map((t) => (
             <option key={t.id} value={t.id}>
               {t.nom}
@@ -151,7 +151,7 @@ export default function StepInfosBase({
           onChange={(e) => setFormData((p) => ({ ...p, agence_id: e.target.value }))}
           className={field}
         >
-          <option value="">— Sélectionner —</option>
+          <option value="">- Sélectionner -</option>
           {donneesRef.agences.map((a) => (
             <option key={a.id} value={a.id}>
               {a.nom}
@@ -172,7 +172,7 @@ export default function StepInfosBase({
           }}
           className={field}
         >
-          <option value="">— Sélectionner —</option>
+          <option value="">- Sélectionner -</option>
           {donneesRef.villes.map((v) => (
             <option key={v.id} value={v.id}>
               {v.nom}
@@ -190,7 +190,7 @@ export default function StepInfosBase({
             onChange={(e) => setFormData((p) => ({ ...p, quartier_id: e.target.value }))}
             className={field}
           >
-            <option value="">— Sélectionner —</option>
+            <option value="">- Sélectionner -</option>
             {quartiers.map((q) => (
               <option key={q.id} value={q.id}>
                 {q.nom}

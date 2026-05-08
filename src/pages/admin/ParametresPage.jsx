@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import ConfirmModal from '../../components/ConfirmModal.jsx'
 import { useUser } from '../../hooks/useUser'
 import { supabase } from '../../lib/supabase'
+import { displayOrDash } from '../../lib/displayOrDash'
 
 const FONT_PLAYFAIR = { fontFamily: '"Playfair Display", serif' }
 
@@ -225,7 +226,7 @@ function QuartiersModalBody({ villesOptions, onDataChange, openConfirm }) {
           }}
           className="w-full cursor-pointer rounded-lg border border-[#E8E3D8] bg-white px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"
         >
-          <option value="">— Choisir une ville —</option>
+          <option value="">- Choisir une ville -</option>
           {villesOptions.map((v) => (
             <option key={v.id} value={v.id}>
               {v.nom}
@@ -459,7 +460,7 @@ export default function ParametresPage() {
           </h2>
           <p className="mt-3 text-sm">
             <span className="text-[#0F1923]/55 dark:text-slate-500">Email</span>
-            <span className="ml-2 font-medium text-[#0F1923] dark:text-slate-200">{user?.email ?? '—'}</span>
+            <span className="ml-2 font-medium text-[#0F1923] dark:text-slate-200">{displayOrDash(user?.email)}</span>
           </p>
         </section>
 

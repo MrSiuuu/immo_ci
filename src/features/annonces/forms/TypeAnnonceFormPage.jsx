@@ -265,7 +265,7 @@ export default function TypeAnnonceFormPage({ config }) {
           <div>
             <label className="mb-1 block text-sm font-medium">Transaction *</label>
             <select className="w-full rounded-lg border border-[#E5E7EB] px-3 py-2" value={form.transaction} onChange={(e) => setValue('transaction', e.target.value)}>
-              <option value="">— Sélectionner —</option>
+              <option value="">- Sélectionner -</option>
               {TRANSACTION_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
             </select>
             {errs.transaction && <p className="mt-1 text-xs text-[#E53935]">{errs.transaction}</p>}
@@ -412,7 +412,7 @@ export default function TypeAnnonceFormPage({ config }) {
           <div>
             <label className="mb-1 block text-sm font-medium">Ville *</label>
             <select className="w-full rounded-lg border border-[#E5E7EB] px-3 py-2" value={form.ville_id} onChange={(e) => onVilleChange(e.target.value)}>
-              <option value="">— Sélectionner —</option>
+              <option value="">- Sélectionner -</option>
               {refs.villes.map((v) => <option key={v.id} value={v.id}>{v.nom}</option>)}
             </select>
             {errs.ville_id && <p className="mt-1 text-xs text-[#E53935]">{errs.ville_id}</p>}

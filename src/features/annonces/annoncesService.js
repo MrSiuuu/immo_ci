@@ -1,5 +1,64 @@
 import { supabase } from '../../lib/supabase'
 
+export async function getPublishedAnnoncesCount() {
+  const { count, error } = await supabase
+    .from('annonces')
+    .select('id', { count: 'exact', head: true })
+    .eq('statut', 'publie')
+  if (error) return { count: 0, error }
+  return { count: count ?? 0, error: null }
+}
+
+export async function getAdminDashboardStats() {
+  const todayStart = new Date()
+  todayStart.setHours(0, 0, 0, 0)
+  const [annoncesRes, annoncesTotalRes, agencesRes, leadsTodayRes, recentRes] = await Promise.all([
+    supabase.from('annonces').select('id', { count: 'exact', head: true }).eq('statut', 'publie'),
+    supabase.from('annonces').select('id', { count: 'exact', head: true }),
+    supabase.from('agences').select('id', { count: 'exact', head: true }).eq('statut', 'active'),
+    supabase.from('contacts').select('id', { count: 'exact', head: true }).gte('created_at', todayStart.toISOString()),
+    supabase
+      .from('annonces')
+      .select('id, titre, prix, statut, created_at, agences(nom)')
+      .order('created_at', { ascending: false })
+      .limit(10),
+  ])
+
+  const error = annoncesRes.error || annoncesTotalRes.error || agencesRes.error || leadsTodayRes.error || recentRes.error
+  if (error) {
+    return {
+      stats: { annoncesPubliees: 0, agencesActives: 0, leadsAujourdHui: 0, totalAnnonces: 0, tauxPublication: 0 },
+      annoncesRecentes: [],
+      activite: [],
+      error,
+    }
+  }
+
+  const annoncesRecentes = (recentRes.data ?? []).slice(0, 5)
+  const activite = (recentRes.data ?? []).map((row) => ({
+    id: row.id,
+    texte: `Nouvelle annonce: ${row.titre ?? 'Sans titre'} - ${row.agences?.nom ?? 'Agence inconnue'}`,
+    temps: row.created_at,
+  }))
+
+  const annoncesPubliees = annoncesRes.count ?? 0
+  const totalAnnonces = annoncesTotalRes.count ?? 0
+  const tauxPublication = totalAnnonces > 0 ? Math.round((annoncesPubliees / totalAnnonces) * 100) : 0
+
+  return {
+    stats: {
+      annoncesPubliees,
+      agencesActives: agencesRes.count ?? 0,
+      leadsAujourdHui: leadsTodayRes.count ?? 0,
+      totalAnnonces,
+      tauxPublication,
+    },
+    annoncesRecentes,
+    activite,
+    error: null,
+  }
+}
+
 /**
  * Charge les listes pour les selects du formulaire d'annonce.
  */
@@ -41,6 +100,10 @@ export async function chargerQuartiers(ville_id) {
  * @returns {Promise<{ annonce: object | null, error: Error | null }>}
  */
 export async function creerAnnonce(donneesAnnonce) {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
   const row = {
     titre: donneesAnnonce.titre,
     description: donneesAnnonce.description ?? null,
@@ -56,6 +119,7 @@ export async function creerAnnonce(donneesAnnonce) {
     latitude: donneesAnnonce.latitude,
     longitude: donneesAnnonce.longitude,
     agence_id: donneesAnnonce.agence_id,
+    created_by: user?.id ?? null,
     statut: donneesAnnonce.statut,
     equipements: donneesAnnonce.equipements ?? {},
   }

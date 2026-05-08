@@ -4,7 +4,7 @@ import AgentTopBar from './AgentTopBar.jsx'
 import AgentStatusBanner from './AgentStatusBanner.jsx'
 
 /**
- * Coquille layout — routes /agence/* (sidebar + topbar + bandeau statut).
+ * Coquille layout - routes /agence/* (sidebar + topbar + bandeau statut).
  */
 export default function AgentShell({ title, children }) {
   const { agence } = useUser()

@@ -81,7 +81,7 @@ export default function OnboardingPage() {
           className="space-y-4 rounded-2xl border border-[#E8E3D8] bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-900"
         >
           <h2 className="text-sm font-semibold uppercase tracking-wide text-[#0F1923]/50 dark:text-slate-500">
-            Étape 1 — Profil agence
+            Étape 1 - Profil agence
           </h2>
           <div>
             <label className="mb-1.5 block text-sm font-medium text-[#0F1923] dark:text-slate-200">WhatsApp *</label>
@@ -124,7 +124,7 @@ export default function OnboardingPage() {
       ) : (
         <div className="space-y-6 rounded-2xl border border-[#E8E3D8] bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-900">
           <h2 className="text-sm font-semibold uppercase tracking-wide text-[#0F1923]/50 dark:text-slate-500">
-            Étape 2 — Première annonce
+            Étape 2 - Première annonce
           </h2>
           <p className="text-sm text-[#0F1923]/80 dark:text-slate-300">
             Votre profil est prêt ! Publiez votre première annonce pour apparaître sur Nestymo.

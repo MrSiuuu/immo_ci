@@ -1,15 +1,39 @@
 @import 'tailwindcss';
 @import 'leaflet/dist/leaflet.css';
 
-/* Typo globale Nestymo */
-body {
-  margin: 0;
-  font-family: 'Inter', system-ui, sans-serif;
-  color: #0f1923;
+/*
+ * Mode sombre désactivé sur tout le dashboard.
+ * On redéfinit la variante `dark:` de Tailwind v4 pour qu'elle ne s'active QUE
+ * si un parent porte la classe `.dark` - classe qui n'est jamais ajoutée.
+ * Conséquence : `prefers-color-scheme: dark` (OS Windows / navigateur) est ignoré,
+ * et toutes les classes `dark:...` existantes dans le code deviennent inertes.
+ * Pour réactiver plus tard : supprimer cette ligne.
+ */
+@custom-variant dark (&:where(.dark, .dark *));
+
+:root {
+  --color-primary: #e02020;
+  --color-primary-dark: #b01010;
+  --color-bg: #ffffff;
+  --color-surface: #f8f8f8;
+  --color-border: #e5e5e5;
+  --color-text: #111111;
+  --color-text-muted: #666666;
+  --color-sidebar: #ffffff;
 }
 
-@media (prefers-color-scheme: dark) {
-  body {
-    color: #e2e8f0;
-  }
+body {
+  margin: 0;
+  font-family: 'DM Sans', system-ui, sans-serif;
+  color: var(--color-text);
+  background: var(--color-bg);
+}
+
+button,
+a,
+[role='button'],
+select,
+input[type='checkbox'],
+input[type='radio'] {
+  cursor: pointer;
 }

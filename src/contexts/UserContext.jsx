@@ -18,6 +18,7 @@ export function UserProvider({ children }) {
   const [statut, setStatut] = useState(null)
   const [mustChangePassword, setMustChangePassword] = useState(false)
   const [agenceId, setAgenceId] = useState(null)
+  const [isOwner, setIsOwner] = useState(false)
   const [agence, setAgence] = useState(null)
   const [hasSeenTutorial, setHasSeenTutorial] = useState(true)
   const [loading, setLoading] = useState(true)
@@ -36,6 +37,7 @@ export function UserProvider({ children }) {
       setStatut(null)
       setMustChangePassword(false)
       setAgenceId(null)
+      setIsOwner(false)
       setAgence(null)
       setHasSeenTutorial(true)
       authSnapshotRef.current = { userId: null, role: null }
@@ -50,7 +52,7 @@ export function UserProvider({ children }) {
       const { data: row, error } = await withTimeout(
         supabase
           .from('users')
-          .select('role, statut, must_change_password, agence_id')
+          .select('role, statut, must_change_password, agence_id, is_owner')
           .eq('id', sessionUser.id)
           .single(),
         PROFILE_TIMEOUT_MS,
@@ -75,11 +77,13 @@ export function UserProvider({ children }) {
       const st = row.statut ?? null
       const mcp = Boolean(row.must_change_password)
       const aid = row.agence_id ?? null
+      const owner = Boolean(row.is_owner)
 
       setRole(r)
       setStatut(st)
       setMustChangePassword(mcp)
       setAgenceId(aid)
+      setIsOwner(owner)
 
       // has_seen_tutorial : requête séparée pour ne pas casser le chargement si la colonne n’existe pas encore.
       try {
@@ -102,7 +106,7 @@ export function UserProvider({ children }) {
           supabase
             .from('agences')
             .select(
-              'id, nom, whatsapp, verification_status, statut, ville, ville_id, quartier, description, adresse, telephone, email, site_web, logo, logo_url',
+              'id, nom, whatsapp, show_phone, show_email, show_whatsapp, verification_status, statut, ville, ville_id, quartier, description, adresse, telephone, email, site_web, logo, logo_url',
             )
             .eq('id', aid)
             .single(),
@@ -131,6 +135,7 @@ export function UserProvider({ children }) {
       setStatut(null)
       setMustChangePassword(false)
       setAgenceId(null)
+      setIsOwner(false)
       setAgence(null)
       setHasSeenTutorial(true)
       authSnapshotRef.current = { userId: sessionUser.id, role: null }
@@ -222,13 +227,14 @@ export function UserProvider({ children }) {
       statut,
       mustChangePassword,
       agenceId,
+      isOwner,
       agence,
       loading,
       needsAgentOnboarding,
       hasSeenTutorial,
       refreshProfile,
     }),
-    [user, role, statut, mustChangePassword, agenceId, agence, loading, needsAgentOnboarding, hasSeenTutorial, refreshProfile]
+    [user, role, statut, mustChangePassword, agenceId, isOwner, agence, loading, needsAgentOnboarding, hasSeenTutorial, refreshProfile]
   )
 
   return <UserContext.Provider value={value}>{children}</UserContext.Provider>

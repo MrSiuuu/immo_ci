@@ -1,4 +1,4 @@
-# Config CLI Supabase — généré pour les Edge Functions.
+# Config CLI Supabase - généré pour les Edge Functions.
 # Après modification : `supabase functions deploy quick-handler`
 
 [functions.quick-handler]

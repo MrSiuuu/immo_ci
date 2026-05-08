@@ -54,7 +54,7 @@ export default function ChangePasswordPage() {
       .eq('id', user.id)
 
     if (errDb) {
-      setErr(errDb.message ?? 'Mot de passe mis à jour mais erreur profil — contactez le support.')
+      setErr(errDb.message ?? 'Mot de passe mis à jour mais erreur profil - contactez le support.')
       setPending(false)
       return
     }

@@ -58,6 +58,7 @@ export default function AnnonceDetailPage() {
   const [annonce, setAnnonce] = useState(null)
   const [photos, setPhotos] = useState([])
   const [stats, setStats] = useState({ vues: 0, clics: 0, contacts: 0, series: [], contactsSeries: [] })
+  const [createdByRole, setCreatedByRole] = useState(null)
 
   useEffect(() => {
     let cancelled = false
@@ -80,6 +81,12 @@ export default function AnnonceDetailPage() {
         return
       }
       setAnnonce(a)
+      const { data: creator } = await supabase
+        .from('users')
+        .select('role')
+        .eq('id', a.created_by)
+        .maybeSingle()
+      if (!cancelled) setCreatedByRole(creator?.role ?? null)
 
       const { data: p } = await supabase
         .from('photos')
@@ -147,6 +154,46 @@ export default function AnnonceDetailPage() {
     setPhotos((prev) => prev.filter((p) => p.id !== photo.id))
   }
 
+  async function notifyAgenceForDecision(nextStatut) {
+    if (!annonce?.agence_id) return
+    const { data: agenceUsers } = await supabase
+      .from('users')
+      .select('id')
+      .eq('role', 'agent')
+      .eq('agence_id', annonce.agence_id)
+    const userIds = (agenceUsers ?? []).map((u) => u.id).filter(Boolean)
+    if (userIds.length === 0) return
+    const rows = userIds.map((userId) => ({
+      user_id: userId,
+      titre: nextStatut === 'publie' ? 'Annonce validée' : 'Annonce refusée',
+      message:
+        nextStatut === 'publie'
+          ? `Votre annonce "${annonce?.titre ?? 'Sans titre'}" a été validée.`
+          : `Votre annonce "${annonce?.titre ?? 'Sans titre'}" a été refusée.`,
+      type: 'annonce_validation',
+      lien: '/agence/annonces',
+      is_read: false,
+    }))
+    await supabase.from('notifications').insert(rows)
+  }
+
+  async function handleAdminDecision(nextStatut) {
+    if (!annonce?.id) return
+    const { error: updateError } = await supabase
+      .from('annonces')
+      .update({ statut: nextStatut })
+      .eq('id', annonce.id)
+    if (updateError) {
+      setError(updateError.message)
+      return
+    }
+    await notifyAgenceForDecision(nextStatut)
+    setAnnonce((prev) => (prev ? { ...prev, statut: nextStatut } : prev))
+  }
+
+  const isAgencyCreatedForAdmin = role === 'admin' && createdByRole === 'agent'
+  const canEditAnnonce = role === 'agent' || !isAgencyCreatedForAdmin
+
   if (loading) return <p className="text-sm text-[#6B7280]">Chargement...</p>
   if (error) return <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-[#E53935]">{error}</p>
 
@@ -155,9 +202,29 @@ export default function AnnonceDetailPage() {
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold text-[#1A1A1A]">{annonce?.titre}</h1>
         <div className="flex gap-2">
-          <button type="button" onClick={() => navigate(`${routeBase}/annonces/${id}/edit`)} className="inline-flex items-center gap-2 rounded-full bg-[#E02020] px-4 py-2 text-sm font-semibold text-white">
-            <Pencil className="h-4 w-4" /> Modifier
-          </button>
+          {canEditAnnonce ? (
+            <button type="button" onClick={() => navigate(`${routeBase}/annonces/${id}/edit`)} className="inline-flex items-center gap-2 rounded-full bg-[#E02020] px-4 py-2 text-sm font-semibold text-white">
+              <Pencil className="h-4 w-4" /> Modifier
+            </button>
+          ) : null}
+          {isAgencyCreatedForAdmin ? (
+            <>
+              <button
+                type="button"
+                onClick={() => handleAdminDecision('publie')}
+                className="inline-flex items-center rounded-full bg-[#1D9E75] px-4 py-2 text-sm font-semibold text-white"
+              >
+                Valider
+              </button>
+              <button
+                type="button"
+                onClick={() => handleAdminDecision('refuse')}
+                className="inline-flex items-center rounded-full bg-[#C0392B] px-4 py-2 text-sm font-semibold text-white"
+              >
+                Refuser
+              </button>
+            </>
+          ) : null}
         </div>
       </div>
 
@@ -167,7 +234,9 @@ export default function AnnonceDetailPage() {
             <div key={photo.id} className="relative">
               <img src={photo.url} alt="" className="h-28 w-full rounded-lg object-cover" />
               {photo.is_principale ? <span className="absolute left-2 top-2 rounded-full bg-[#E02020] px-2 py-0.5 text-[10px] text-white">Principale</span> : null}
-              <button type="button" onClick={() => handleDeletePhoto(photo)} className="absolute right-2 top-2 rounded-full bg-black/70 px-2 py-0.5 text-xs text-white">X</button>
+              {canEditAnnonce ? (
+                <button type="button" onClick={() => handleDeletePhoto(photo)} className="absolute right-2 top-2 rounded-full bg-black/70 px-2 py-0.5 text-xs text-white">X</button>
+              ) : null}
             </div>
           ))}
         </div>

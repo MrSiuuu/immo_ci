@@ -1,4 +1,4 @@
-// Client Supabase — une seule instance dans le navigateur (y compris après HMR Vite).
+// Client Supabase - une seule instance dans le navigateur (y compris après HMR Vite).
 // Réutilisation via globalThis pour éviter plusieurs GoTrueClient / contention sur le lock auth.
 //
 // Important : `auth.lock` attend une fonction (LockFunc), pas la chaîne 'navigator'.
@@ -13,7 +13,7 @@ if (!supabaseUrl || !supabaseKey) {
 }
 
 const g = globalThis
-// V2 : options auth.lock explicites — ne pas réutiliser l’ancienne instance sous une autre clé après changement.
+// V2 : options auth.lock explicites - ne pas réutiliser l’ancienne instance sous une autre clé après changement.
 const SINGLETON_KEY = '__IMMOCI_SUPABASE_CLIENT_V2__'
 
 /** Même sémantique que lockNoOp du SDK : pas de Web Locks API (évite blocages infinis sur getSession / init). */

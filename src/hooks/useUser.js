@@ -2,7 +2,7 @@ import { useContext } from 'react'
 import { UserContext } from '../contexts/UserContext.jsx'
 
 /**
- * Accès au profil + rôle — doit être utilisé sous {@link UserProvider}.
+ * Accès au profil + rôle - doit être utilisé sous {@link UserProvider}.
  * @returns {{
  *   user: { id: string, email: string } | null,
  *   role: 'admin' | 'agent' | 'user' | null,
