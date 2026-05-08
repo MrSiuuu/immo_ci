@@ -158,8 +158,6 @@ export default function AnnoncesPage() {
       await supabase.from('annonces').update({ statut: 'publie' }).eq('id', annonce.id)
     } else if (action === 'refuser') {
       await supabase.from('annonces').update({ statut: 'refuse' }).eq('id', annonce.id)
-    } else if (action === 'supprimer') {
-      await supabase.from('annonces').delete().eq('id', annonce.id)
     }
     const { data, error: err, count: total } = await applyQuery()
     if (err) setError(err.message)
@@ -173,7 +171,6 @@ export default function AnnoncesPage() {
     const opts = [{ value: 'voir', label: 'Voir' }]
     if (annonce.statut !== 'publie') opts.push({ value: 'publier', label: 'Publier' })
     if (annonce.statut !== 'refuse') opts.push({ value: 'refuser', label: 'Refuser' })
-    opts.push({ value: 'supprimer', label: 'Supprimer' })
     return opts
   }
 

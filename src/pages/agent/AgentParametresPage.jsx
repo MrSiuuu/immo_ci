@@ -42,6 +42,8 @@ export default function AgentParametresPage() {
   const [villeId, setVilleId] = useState('')
   const [quartier, setQuartier] = useState('')
   const [logoUrl, setLogoUrl] = useState('')
+  const [logoFile, setLogoFile] = useState(null)
+  const [logoPreview, setLogoPreview] = useState('')
   const [pwdCurrent, setPwdCurrent] = useState('')
   const [pwdNew, setPwdNew] = useState('')
   const [pwdConfirm, setPwdConfirm] = useState('')
@@ -53,6 +55,7 @@ export default function AgentParametresPage() {
   const [showPhone, setShowPhone] = useState(true)
   const [showEmail, setShowEmail] = useState(true)
   const [showWhatsapp, setShowWhatsapp] = useState(true)
+  const [agentActionLoadingId, setAgentActionLoadingId] = useState(null)
 
   useEffect(() => {
     if (!agence) return
@@ -115,6 +118,12 @@ export default function AgentParametresPage() {
       mounted = false
     }
   }, [])
+
+  useEffect(() => {
+    return () => {
+      if (logoPreview) URL.revokeObjectURL(logoPreview)
+    }
+  }, [logoPreview])
 
   const showToast = useCallback((type, message) => {
     setToast({ type, message })
@@ -179,7 +188,7 @@ export default function AgentParametresPage() {
   async function handleLogoChange(e) {
     const file = e.target.files?.[0]
     e.target.value = ''
-    if (!file || !agenceId) return
+    if (!file) return
     const okTypes = ['image/jpeg', 'image/png', 'image/webp']
     if (!okTypes.includes(file.type)) {
       showToast('error', 'Formats acceptés : JPG, PNG, WEBP.')
@@ -189,6 +198,13 @@ export default function AgentParametresPage() {
       showToast('error', 'Image trop volumineuse (max 2 Mo).')
       return
     }
+    setLogoFile(file)
+    if (logoPreview) URL.revokeObjectURL(logoPreview)
+    setLogoPreview(URL.createObjectURL(file))
+  }
+
+  async function handleUploadLogo() {
+    if (!logoFile || !agenceId) return
     setPending(true)
     const oldPath = (() => {
       const oldUrl = agence?.logo_url ?? agence?.logo ?? ''
@@ -199,8 +215,8 @@ export default function AgentParametresPage() {
     if (oldPath) {
       await supabase.storage.from('annonces-photos').remove([oldPath])
     }
-    const path = `logos/${agenceId}/${Date.now()}-${file.name.replace(/[^\w.-]/g, '_')}`
-    const { error: upErr } = await supabase.storage.from('annonces-photos').upload(path, file, {
+    const path = `agences/${agenceId}/logos/${Date.now()}-${logoFile.name.replace(/[^\w.-]/g, '_')}`
+    const { error: upErr } = await supabase.storage.from('annonces-photos').upload(path, logoFile, {
       cacheControl: '3600',
       upsert: false,
     })
@@ -218,6 +234,9 @@ export default function AgentParametresPage() {
       return
     }
     setLogoUrl(url)
+    setLogoFile(null)
+    if (logoPreview) URL.revokeObjectURL(logoPreview)
+    setLogoPreview('')
     await refreshProfile()
     showToast('success', 'Logo mis à jour.')
   }
@@ -236,6 +255,7 @@ export default function AgentParametresPage() {
     setPending(true)
     if (!pwdCurrent) {
       setFormErr('Le mot de passe actuel est requis.')
+      setPending(false)
       return
     }
     const { error: authErr } = await supabase.auth.signInWithPassword({
@@ -456,6 +476,12 @@ export default function AgentParametresPage() {
           ) : (
             <p className="text-sm text-[#0F1923]/60 dark:text-slate-400">Aucun logo défini.</p>
           )}
+          {logoPreview ? (
+            <div className="rounded-lg border border-[#E5E7EB] bg-[#FAFAFA] p-3">
+              <p className="mb-2 text-xs text-[#6B7280]">Aperçu avant upload</p>
+              <img src={logoPreview} alt="Aperçu logo" className="h-20 w-auto max-w-[200px] rounded-lg border object-contain" />
+            </div>
+          ) : null}
           <div>
             <label className={labelClass} htmlFor="ap-logo">
               Changer le logo
@@ -469,6 +495,14 @@ export default function AgentParametresPage() {
               disabled={pending}
             />
             <p className="mt-1 text-xs text-[#0F1923]/50 dark:text-slate-500">JPG, PNG ou WEBP - max 2 Mo.</p>
+            <button
+              type="button"
+              onClick={handleUploadLogo}
+              disabled={!logoFile || pending}
+              className="mt-2 rounded-full bg-[#111111] px-4 py-2 text-sm text-white disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {pending ? 'Upload en cours...' : 'Uploader le logo'}
+            </button>
           </div>
         </Section>
 
@@ -498,14 +532,17 @@ export default function AgentParametresPage() {
                 {!c.is_owner ? (
                   <button
                     type="button"
+                    disabled={agentActionLoadingId === c.id}
                     onClick={async () => {
+                      setAgentActionLoadingId(c.id)
                       await setStatutAgent(c.id, c.statut === 'actif' ? 'suspendu' : 'actif')
                       const { data } = await supabase.from('users').select('id, nom, prenom, email, statut, is_owner, created_at').eq('agence_id', agenceId).order('created_at', { ascending: true })
                       setComptesAgence(data ?? [])
+                      setAgentActionLoadingId(null)
                     }}
-                    className="rounded-lg border border-[#E02020] px-3 py-1.5 text-xs text-[#E02020]"
+                    className="rounded-lg border border-[#E02020] px-3 py-1.5 text-xs text-[#E02020] disabled:cursor-not-allowed disabled:opacity-50"
                   >
-                    {c.statut === 'actif' ? 'Suspendre' : 'Réactiver'}
+                    {agentActionLoadingId === c.id ? 'Traitement...' : c.statut === 'actif' ? 'Suspendre' : 'Réactiver'}
                   </button>
                 ) : null}
               </li>
@@ -518,7 +555,7 @@ export default function AgentParametresPage() {
         <Section icon={KeyRound} title="Mot de passe du compte">
           <div>
             <label className={labelClass} htmlFor="ap-pc">
-              Mot de passe actuel (optionnel)
+              Mot de passe actuel *
             </label>
             <input
               id="ap-pc"

@@ -73,7 +73,7 @@ function SectionLabel({ children }) {
  * Navigation latérale - espace agent uniquement (/agence/*).
  */
 export default function AgentSidebar() {
-  const { user, agence } = useUser()
+  const { user, agence, isOwner } = useUser()
   const agenceNom = agence?.nom?.trim() || 'Mon agence'
 
   async function handleLogout() {
@@ -128,6 +128,7 @@ export default function AgentSidebar() {
       <div className="mt-auto border-t border-[#E5E5E5] p-4">
         <div className="mb-4 min-w-0">
           <p className="truncate text-sm font-semibold text-[#111111]">{agenceNom}</p>
+          {isOwner ? <p className="mt-0.5 text-[11px] text-[#9CA3AF]">Compte principal</p> : null}
           <p className="truncate text-xs text-[#666666]">Agent immobilier</p>
           {user?.email ? <p className="mt-1 truncate text-[11px] text-[#888888]">{user.email}</p> : null}
         </div>

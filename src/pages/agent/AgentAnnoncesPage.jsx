@@ -47,13 +47,32 @@ export default function AgentAnnoncesPage() {
   const navigate = useNavigate()
   const { agenceId } = useUser()
   const [rows, setRows] = useState([])
+  const [agents, setAgents] = useState([])
   const [count, setCount] = useState(0)
   const [page, setPage] = useState(1)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [search, setSearch] = useState('')
   const [quick, setQuick] = useState('tous')
+  const [agentFilter, setAgentFilter] = useState('all')
   const totalPages = useMemo(() => Math.max(1, Math.ceil(count / PAGE_SIZE)), [count])
+
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      if (!agenceId) return
+      const { data } = await supabase
+        .from('users')
+        .select('id, nom, prenom, email')
+        .eq('role', 'agent')
+        .eq('agence_id', agenceId)
+        .order('created_at', { ascending: true })
+      if (!cancelled) setAgents(data ?? [])
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [agenceId])
 
   useEffect(() => {
     let cancelled = false
@@ -66,8 +85,8 @@ export default function AgentAnnoncesPage() {
         .from('annonces')
         .select(
           `
-            id, titre, prix, statut, transaction, created_at,
-            types_biens(nom), villes(nom), quartiers(id,nom), photos(url,ordre,is_principale)
+            id, titre, prix, statut, transaction, created_at, created_by,
+            types_biens(nom), villes(nom), quartiers(id,nom), photos(url,ordre,is_principale), users:created_by(id,nom,prenom,email)
           `,
           { count: 'exact' },
         )
@@ -76,13 +95,24 @@ export default function AgentAnnoncesPage() {
         .range(from, to)
 
       if (quick !== 'tous') q = q.eq('statut', quick)
+      if (agentFilter !== 'all') q = q.eq('created_by', agentFilter)
 
       const term = search.trim()
       if (term) {
-        const { data: quartiersRes } = await supabase.from('quartiers').select('id').ilike('nom', `%${term}%`)
+        const [{ data: quartiersRes }, { data: usersRes }] = await Promise.all([
+          supabase.from('quartiers').select('id').ilike('nom', `%${term}%`),
+          supabase
+            .from('users')
+            .select('id')
+            .eq('role', 'agent')
+            .eq('agence_id', agenceId)
+            .or(`nom.ilike.%${term}%,prenom.ilike.%${term}%,email.ilike.%${term}%`),
+        ])
         const quartierIds = (quartiersRes ?? []).map((x) => x.id).filter(Boolean)
+        const userIds = (usersRes ?? []).map((x) => x.id).filter(Boolean)
         const orParts = [`titre.ilike.%${term}%`]
         if (quartierIds.length) orParts.push(`quartier_id.in.(${quartierIds.join(',')})`)
+        if (userIds.length) orParts.push(`created_by.in.(${userIds.join(',')})`)
         q = q.or(orParts.join(','))
       }
 
@@ -100,7 +130,7 @@ export default function AgentAnnoncesPage() {
     return () => {
       cancelled = true
     }
-  }, [page, quick, search, agenceId])
+  }, [page, quick, search, agenceId, agentFilter])
 
   async function handleAction(action, annonce) {
     if (action === 'voir') {
@@ -111,17 +141,26 @@ export default function AgentAnnoncesPage() {
       navigate(`/agence/annonces/${annonce.id}/edit`)
       return
     }
-    if (action === 'supprimer') {
-      await supabase.from('annonces').delete().eq('id', annonce.id)
+    if (action === 'brouillon') {
+      await supabase.from('annonces').update({ statut: 'brouillon' }).eq('id', annonce.id)
     }
-    setPage(1)
+    const from = (page - 1) * PAGE_SIZE
+    const to = from + PAGE_SIZE - 1
+    const { data, count: total } = await supabase
+      .from('annonces')
+      .select('id, titre, prix, statut, transaction, created_at, created_by, types_biens(nom), villes(nom), quartiers(id,nom), photos(url,ordre,is_principale), users:created_by(id,nom,prenom,email)', { count: 'exact' })
+      .eq('agence_id', agenceId)
+      .order('created_at', { ascending: false })
+      .range(from, to)
+    setRows(data ?? [])
+    setCount(total ?? 0)
   }
 
   function getActions() {
     return [
       { value: 'voir', label: 'Voir' },
       { value: 'modifier', label: 'Modifier' },
-      { value: 'supprimer', label: 'Supprimer' },
+      { value: 'brouillon', label: 'Mettre en brouillon' },
     ]
   }
 
@@ -147,6 +186,39 @@ export default function AgentAnnoncesPage() {
           }}
           className="w-full rounded-lg border border-[#E5E5E5] px-3 py-2 text-sm"
         />
+      </div>
+
+      <div className="mb-3 flex flex-wrap gap-2">
+        <button
+          type="button"
+          onClick={() => {
+            setAgentFilter('all')
+            setPage(1)
+          }}
+          className={`rounded-full px-3 py-1.5 text-xs ${
+            agentFilter === 'all' ? 'bg-[#111111] text-white' : 'border border-[#E5E5E5] bg-white text-[#111111]'
+          }`}
+        >
+          Tous les agents
+        </button>
+        {agents.map((agent) => {
+          const label = [agent.prenom, agent.nom].filter(Boolean).join(' ') || agent.email || 'Agent'
+          return (
+            <button
+              key={agent.id}
+              type="button"
+              onClick={() => {
+                setAgentFilter(agent.id)
+                setPage(1)
+              }}
+              className={`rounded-full px-3 py-1.5 text-xs ${
+                agentFilter === agent.id ? 'bg-[#111111] text-white' : 'border border-[#E5E5E5] bg-white text-[#111111]'
+              }`}
+            >
+              {label}
+            </button>
+          )
+        })}
       </div>
 
       <div className="mb-4 flex flex-wrap gap-2">
@@ -176,6 +248,7 @@ export default function AgentAnnoncesPage() {
               <th className="px-3 py-2 font-semibold">Photo</th>
               <th className="px-3 py-2 font-semibold">Titre</th>
               <th className="px-3 py-2 font-semibold">Quartier</th>
+              <th className="px-3 py-2 font-semibold">Agent</th>
               <th className="px-3 py-2 font-semibold">Prix</th>
               <th className="px-3 py-2 font-semibold">Transaction</th>
               <th className="px-3 py-2 font-semibold">Statut</th>
@@ -204,6 +277,9 @@ export default function AgentAnnoncesPage() {
                   </td>
                   <td className="px-3 py-1.5">{displayOrDash(a.titre)}</td>
                   <td className="px-3 py-1.5">{displayOrDash(a.quartiers?.nom)}</td>
+                  <td className="px-3 py-1.5">
+                    {displayOrDash([a.users?.prenom, a.users?.nom].filter(Boolean).join(' ') || a.users?.email)}
+                  </td>
                   <td className="px-3 py-1.5">{formatPrixFcfa(a.prix)}</td>
                   <td className="px-3 py-1.5">
                     <span className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${badgeTransaction(a.transaction)}`}>{displayOrDash(a.transaction)}</span>

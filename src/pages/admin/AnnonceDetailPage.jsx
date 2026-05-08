@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { BarChart, Bar, CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
-import { Eye, MousePointerClick, Pencil } from 'lucide-react'
+import { Eye, MousePointerClick, Pencil, Trash2, Users } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { useUser } from '../../hooks/useUser'
 
@@ -58,7 +58,9 @@ export default function AnnonceDetailPage() {
   const [annonce, setAnnonce] = useState(null)
   const [photos, setPhotos] = useState([])
   const [stats, setStats] = useState({ vues: 0, clics: 0, contacts: 0, series: [], contactsSeries: [] })
-  const [createdByRole, setCreatedByRole] = useState(null)
+  const [decisionLoading, setDecisionLoading] = useState(null)
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [deleteLoading, setDeleteLoading] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -71,7 +73,7 @@ export default function AnnonceDetailPage() {
 
       const { data: a, error: errA } = await supabase
         .from('annonces')
-        .select('*, types_biens(nom), villes(nom), quartiers(nom), agences(nom)')
+        .select('*, types_biens(nom), villes(nom), quartiers(nom), agences(nom), users:created_by(nom, prenom, email, role)')
         .eq('id', id)
         .single()
       if (cancelled) return
@@ -81,12 +83,6 @@ export default function AnnonceDetailPage() {
         return
       }
       setAnnonce(a)
-      const { data: creator } = await supabase
-        .from('users')
-        .select('role')
-        .eq('id', a.created_by)
-        .maybeSingle()
-      if (!cancelled) setCreatedByRole(creator?.role ?? null)
 
       const { data: p } = await supabase
         .from('photos')
@@ -179,18 +175,36 @@ export default function AnnonceDetailPage() {
 
   async function handleAdminDecision(nextStatut) {
     if (!annonce?.id) return
+    setDecisionLoading(nextStatut)
     const { error: updateError } = await supabase
       .from('annonces')
       .update({ statut: nextStatut })
       .eq('id', annonce.id)
     if (updateError) {
       setError(updateError.message)
+      setDecisionLoading(null)
       return
     }
     await notifyAgenceForDecision(nextStatut)
     setAnnonce((prev) => (prev ? { ...prev, statut: nextStatut } : prev))
+    setDecisionLoading(null)
   }
 
+  async function handleDeleteAnnonce() {
+    if (!annonce?.id || role !== 'admin') return
+    setDeleteLoading(true)
+    const { error: delError } = await supabase.from('annonces').delete().eq('id', annonce.id)
+    setDeleteLoading(false)
+    if (delError) {
+      setError(delError.message)
+      return
+    }
+    setShowDeleteModal(false)
+    navigate('/admin/annonces')
+  }
+
+  const createdByRole = annonce?.users?.role ?? null
+  const creatorLabel = [annonce?.users?.prenom, annonce?.users?.nom].filter(Boolean).join(' ') || annonce?.users?.email || '-'
   const isAgencyCreatedForAdmin = role === 'admin' && createdByRole === 'agent'
   const canEditAnnonce = role === 'agent' || !isAgencyCreatedForAdmin
 
@@ -198,9 +212,23 @@ export default function AnnonceDetailPage() {
   if (error) return <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-[#E53935]">{error}</p>
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 font-sans">
+      {showDeleteModal ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-md rounded-xl bg-white p-5 shadow-xl">
+            <h3 className="text-lg font-semibold text-[#111111]">Supprimer l'annonce</h3>
+            <p className="mt-2 text-sm text-[#6B7280]">Êtes-vous sûr de vouloir supprimer cette annonce ? Cette action est irréversible.</p>
+            <div className="mt-4 flex justify-end gap-2">
+              <button type="button" onClick={() => setShowDeleteModal(false)} className="rounded-lg border border-[#E5E7EB] px-3 py-2 text-sm text-[#111111]">Annuler</button>
+              <button type="button" disabled={deleteLoading} onClick={handleDeleteAnnonce} className="rounded-lg bg-[#111111] px-3 py-2 text-sm text-white disabled:opacity-60">
+                {deleteLoading ? 'Suppression en cours...' : 'Confirmer la suppression'}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold text-[#1A1A1A]">{annonce?.titre}</h1>
+        <h1 className="text-3xl font-bold text-[#1A1A1A]">{annonce?.titre}</h1>
         <div className="flex gap-2">
           {canEditAnnonce ? (
             <button type="button" onClick={() => navigate(`${routeBase}/annonces/${id}/edit`)} className="inline-flex items-center gap-2 rounded-full bg-[#E02020] px-4 py-2 text-sm font-semibold text-white">
@@ -211,24 +239,26 @@ export default function AnnonceDetailPage() {
             <>
               <button
                 type="button"
+                disabled={decisionLoading != null || annonce?.statut === 'publie'}
                 onClick={() => handleAdminDecision('publie')}
-                className="inline-flex items-center rounded-full bg-[#1D9E75] px-4 py-2 text-sm font-semibold text-white"
+                className="inline-flex items-center rounded-full bg-[#1D9E75] px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
               >
-                Valider
+                {decisionLoading === 'publie' ? 'Validation en cours...' : 'Valider'}
               </button>
               <button
                 type="button"
+                disabled={decisionLoading != null || annonce?.statut === 'refuse'}
                 onClick={() => handleAdminDecision('refuse')}
-                className="inline-flex items-center rounded-full bg-[#C0392B] px-4 py-2 text-sm font-semibold text-white"
+                className="inline-flex items-center rounded-full bg-[#C0392B] px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
               >
-                Refuser
+                {decisionLoading === 'refuse' ? 'Refus en cours...' : 'Refuser'}
               </button>
             </>
           ) : null}
         </div>
       </div>
 
-      <section className="rounded-lg border border-[#E5E7EB] bg-white p-4">
+      <section className="rounded-xl border border-[#E5E7EB] bg-white p-4 shadow-sm">
         <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
           {photos.map((photo) => (
             <div key={photo.id} className="relative">
@@ -242,28 +272,41 @@ export default function AnnonceDetailPage() {
         </div>
       </section>
 
-      <section className="rounded-lg border border-[#E5E7EB] bg-white p-4">
-        <p className="text-sm text-[#6B7280]">{annonce?.types_biens?.nom} - {annonce?.transaction} - {Number(annonce?.prix ?? 0).toLocaleString('fr-FR')} FCFA</p>
+      <section className="rounded-xl border border-[#E5E7EB] bg-white p-5 shadow-sm">
+        <p className="text-sm text-[#6B7280]">{annonce?.types_biens?.nom} - {annonce?.transaction}</p>
+        <p className="mt-1 text-3xl font-bold text-[#E02020]">{Number(annonce?.prix ?? 0).toLocaleString('fr-FR')} FCFA</p>
+        <p className="mt-1 text-xs text-[#9CA3AF]">Créée par : {creatorLabel}</p>
         <p className="mt-2 text-sm text-[#1A1A1A]">{annonce?.description ?? 'Aucune description'}</p>
-        <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
-          <p>Surface: {annonce?.surface ?? '-'} m²</p>
-          <p>Chambres: {annonce?.chambres ?? '-'}</p>
-          <p>Salles de bain: {annonce?.salles_de_bain ?? '-'}</p>
-          <p>Adresse: {annonce?.adresse ?? '-'}</p>
-          <p>Ville: {annonce?.villes?.nom ?? '-'}</p>
-          <p>Quartier: {annonce?.quartiers?.nom ?? '-'}</p>
+        <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2">
+          {[
+            { label: 'Surface', value: `${annonce?.surface ?? '-'} m²` },
+            { label: 'Chambres', value: `${annonce?.chambres ?? '-'}` },
+            { label: 'Salles de bain', value: `${annonce?.salles_de_bain ?? '-'}` },
+            { label: 'Adresse', value: annonce?.adresse ?? '-' },
+            { label: 'Ville', value: annonce?.villes?.nom ?? '-' },
+            { label: 'Quartier', value: annonce?.quartiers?.nom ?? '-' },
+          ].map((item) => (
+            <div key={item.label} className="rounded-lg border border-[#F3F4F6] bg-[#FAFAFA] px-3 py-2">
+              <p className="text-[11px] uppercase tracking-wide text-[#9CA3AF]">{item.label}</p>
+              <p className="mt-1 text-sm font-semibold text-[#111111]">{item.value}</p>
+            </div>
+          ))}
         </div>
         <div className="mt-3">
           <p className="text-sm font-medium">Equipements</p>
           {equipementsList.length === 0 ? <p className="text-sm text-[#6B7280]">Aucun</p> : (
-            <ul className="mt-1 grid grid-cols-1 gap-1 text-sm md:grid-cols-2">
-              {equipementsList.map((line) => <li key={line}>- {line}</li>)}
-            </ul>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {equipementsList.map((line) => (
+                <span key={line} className="rounded-full border border-[#E5E7EB] bg-[#F9FAFB] px-2.5 py-1 text-xs text-[#374151]">
+                  {line}
+                </span>
+              ))}
+            </div>
           )}
         </div>
       </section>
 
-      <section className="space-y-4 rounded-lg border border-[#E5E7EB] bg-white p-4">
+      <section className="space-y-4 rounded-xl border border-[#E5E7EB] bg-white p-4 shadow-sm">
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold">Statistiques du bien</h2>
           <div className="flex gap-2">
@@ -272,10 +315,10 @@ export default function AnnonceDetailPage() {
             ))}
           </div>
         </div>
-        <div className="grid grid-cols-3 gap-3">
-          <div className="rounded-lg border border-[#E5E7EB] p-3"><p className="text-xs text-[#6B7280]">Vues</p><p className="inline-flex items-center gap-1 text-xl font-semibold"><Eye className="h-4 w-4" />{stats.vues}</p></div>
-          <div className="rounded-lg border border-[#E5E7EB] p-3"><p className="text-xs text-[#6B7280]">Clics</p><p className="inline-flex items-center gap-1 text-xl font-semibold"><MousePointerClick className="h-4 w-4" />{stats.clics}</p></div>
-          <div className="rounded-lg border border-[#E5E7EB] p-3"><p className="text-xs text-[#6B7280]">Contacts</p><p className="text-xl font-semibold">{stats.contacts}</p></div>
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+          <div className="rounded-lg border border-[#E5E7EB] bg-white p-3"><p className="text-xs text-[#6B7280]">Vues</p><p className="mt-1 inline-flex items-center gap-1 text-2xl font-semibold"><Eye className="h-4 w-4 text-[#E02020]" />{stats.vues}</p></div>
+          <div className="rounded-lg border border-[#E5E7EB] bg-white p-3"><p className="text-xs text-[#6B7280]">Clics</p><p className="mt-1 inline-flex items-center gap-1 text-2xl font-semibold"><MousePointerClick className="h-4 w-4 text-[#E02020]" />{stats.clics}</p></div>
+          <div className="rounded-lg border border-[#E5E7EB] bg-white p-3"><p className="text-xs text-[#6B7280]">Contacts</p><p className="mt-1 inline-flex items-center gap-1 text-2xl font-semibold"><Users className="h-4 w-4 text-[#E02020]" />{stats.contacts}</p></div>
         </div>
         <div className="grid gap-4 lg:grid-cols-2">
           <div>
@@ -305,6 +348,19 @@ export default function AnnonceDetailPage() {
           </div>
         </div>
       </section>
+
+      {role === 'admin' ? (
+        <div className="flex justify-end">
+          <button
+            type="button"
+            onClick={() => setShowDeleteModal(true)}
+            className="inline-flex items-center gap-2 rounded-lg border border-[#D1D5DB] bg-white px-4 py-2 text-sm text-[#374151] hover:bg-[#F9FAFB]"
+          >
+            <Trash2 className="h-4 w-4" />
+            Supprimer l'annonce
+          </button>
+        </div>
+      ) : null}
     </div>
   )
 }
