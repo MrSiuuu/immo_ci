@@ -16,7 +16,7 @@ CREATE TYPE public.agence_statut AS ENUM ('active', 'suspendue');
 CREATE TYPE public.annonce_statut AS ENUM ('brouillon', 'publie', 'reserve', 'vendu', 'loue');
 CREATE TYPE public.contact_statut AS ENUM ('nouveau', 'en_cours', 'traite');
 CREATE TYPE public.boost_statut AS ENUM ('actif', 'expire', 'annule');
-CREATE TYPE public.abonnement_plan AS ENUM ('basique', 'premium', 'pro');
+CREATE TYPE public.abonnement_plan AS ENUM ('starter', 'basique', 'premium', 'pro');
 CREATE TYPE public.abonnement_statut AS ENUM ('actif', 'expire', 'annule');
 CREATE TYPE public.expediteur_type AS ENUM ('user', 'agence');
 
@@ -77,6 +77,7 @@ CREATE TABLE public.agences (
   statut      public.agence_statut NOT NULL DEFAULT 'active',
   verification_status text NOT NULL DEFAULT 'pending'
     CHECK (verification_status IN ('pending', 'verified', 'rejected')),
+  numero_agrement_mclu text,
   created_at  timestamptz NOT NULL DEFAULT now()
 );
 

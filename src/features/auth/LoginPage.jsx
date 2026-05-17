@@ -157,7 +157,7 @@ export default function LoginPage() {
               Bon retour parmi nous
             </h2>
             <p className="mt-2 text-sm text-[#666666]">
-              Connectez-vous pour accéder à votre espace (admin ou agence)
+              Connectez-vous pour accéder à votre espace professionnel
             </p>
 
             <form onSubmit={handleSubmit} className="mt-8 space-y-5">

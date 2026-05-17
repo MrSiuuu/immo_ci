@@ -4,6 +4,7 @@ import { ChevronLeft, ChevronRight, Eye, Info, Search } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { getAgentCountsByAgenceIds, getAllAgences, setStatutAgence, setVerificationStatus } from './agencesService.js'
 import { displayOrDash } from '../../lib/displayOrDash'
+import { labelAbonnementPlan } from '../../lib/planLabels.js'
 
 const PAGE_SIZE = 10
 const QUICK_FILTERS = [
@@ -81,9 +82,9 @@ export default function AgencesListPage() {
           supabase.from('contacts').select('agence_id, created_at').in('agence_id', agenceIds).gte('created_at', thisMonthStart.toISOString()),
         ])
         const byAgence = {}
-        for (const id of agenceIds) byAgence[id] = { forfait: 'Starter', annoncesActives: 0, leadsMois: 0 }
+        for (const id of agenceIds) byAgence[id] = { forfait: 'starter', annoncesActives: 0, leadsMois: 0 }
         for (const a of abos.data ?? []) {
-          if (byAgence[a.agence_id] && byAgence[a.agence_id].forfait === 'Starter') byAgence[a.agence_id].forfait = a.plan
+          if (byAgence[a.agence_id] && byAgence[a.agence_id].forfait === 'starter') byAgence[a.agence_id].forfait = a.plan
         }
         for (const a of annonces.data ?? []) {
           if (byAgence[a.agence_id]) byAgence[a.agence_id].annoncesActives += 1
@@ -190,7 +191,7 @@ export default function AgencesListPage() {
                 `"${String(r.email ?? '').replaceAll('"', '""')}"`,
                 r.statut ?? '',
                 r.verification_status ?? '',
-                enriched[r.id]?.forfait ?? 'Starter',
+                labelAbonnementPlan(enriched[r.id]?.forfait),
                 enriched[r.id]?.annoncesActives ?? 0,
                 enriched[r.id]?.leadsMois ?? 0,
               ].join(','),
@@ -274,7 +275,7 @@ export default function AgencesListPage() {
                     </td>
                     <td className="px-4 py-3">
                       <span className="rounded-full bg-[#F3F4F6] px-2 py-0.5 text-xs font-medium text-[#374151]">
-                        {enriched[a.id]?.forfait ?? 'Starter'}
+                        {labelAbonnementPlan(enriched[a.id]?.forfait)}
                       </span>
                     </td>
                     <td className="px-4 py-3">

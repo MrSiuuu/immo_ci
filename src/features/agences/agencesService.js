@@ -73,7 +73,8 @@ export async function getAgenceById(id) {
     .from('agences')
     .select(`
       id, nom, description, logo, logo_url, adresse, ville, ville_id, quartier,
-      telephone, whatsapp, email, site_web, statut, verification_status, created_at, created_by
+      telephone, whatsapp, email, site_web, statut, verification_status, created_at, created_by,
+      numero_agrement_mclu
     `)
     .eq('id', id)
     .single()
@@ -151,6 +152,10 @@ const CHAMPS_AGENCE_AGENT = new Set([
   'site_web',
   'logo',
   'logo_url',
+  'numero_agrement_mclu',
+  'show_phone',
+  'show_email',
+  'show_whatsapp',
 ])
 
 /**

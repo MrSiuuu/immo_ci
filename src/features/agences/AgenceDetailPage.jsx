@@ -10,6 +10,7 @@ import {
   setStatutAgence,
   setVerificationStatus,
 } from './agencesService.js'
+import { labelAbonnementPlan } from '../../lib/planLabels.js'
 
 function BadgeVerification({ status }) {
   const map = {
@@ -38,7 +39,7 @@ export default function AgenceDetailPage() {
   const [loading, setLoading] = useState(true)
   const [err, setErr] = useState(null)
   const [busy, setBusy] = useState(false)
-  const [meta, setMeta] = useState({ forfait: 'Starter', annoncesActives: 0, leadsMois: 0 })
+  const [meta, setMeta] = useState({ forfait: 'starter', annoncesActives: 0, leadsMois: 0 })
 
   const [showFormAgent, setShowFormAgent] = useState(false)
   const [newEmail, setNewEmail] = useState('')
@@ -67,7 +68,7 @@ export default function AgenceDetailPage() {
     ])
     setAgents(list)
     setMeta({
-      forfait: abonnementsRes.data?.[0]?.plan ?? 'Starter',
+      forfait: abonnementsRes.data?.[0]?.plan ?? 'starter',
       annoncesActives: annoncesRes.count ?? 0,
       leadsMois: leadsRes.count ?? 0,
     })
@@ -205,7 +206,7 @@ export default function AgenceDetailPage() {
       <section className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
         <article className="rounded-xl border border-[#E5E7EB] bg-white p-4 shadow-sm">
           <p className="text-xs text-[#6B7280]">Forfait</p>
-          <p className="mt-1 text-lg font-semibold text-[#111111]">{meta.forfait}</p>
+          <p className="mt-1 text-lg font-semibold text-[#111111]">{labelAbonnementPlan(meta.forfait)}</p>
         </article>
         <article className="rounded-xl border border-[#E5E7EB] bg-white p-4 shadow-sm">
           <p className="text-xs text-[#6B7280]">MCLU</p>

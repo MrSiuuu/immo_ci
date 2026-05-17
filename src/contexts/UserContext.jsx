@@ -106,7 +106,7 @@ export function UserProvider({ children }) {
           supabase
             .from('agences')
             .select(
-              'id, nom, whatsapp, show_phone, show_email, show_whatsapp, verification_status, statut, ville, ville_id, quartier, description, adresse, telephone, email, site_web, logo, logo_url',
+              'id, nom, whatsapp, show_phone, show_email, show_whatsapp, verification_status, statut, ville, ville_id, quartier, description, adresse, telephone, email, site_web, logo, logo_url, numero_agrement_mclu, created_at',
             )
             .eq('id', aid)
             .single(),
@@ -184,6 +184,12 @@ export function UserProvider({ children }) {
       }
 
       if (event === 'INITIAL_SESSION') {
+        return
+      }
+
+      if (event === 'USER_UPDATED' && session?.user) {
+        setUser({ id: session.user.id, email: session.user.email ?? '' })
+        setLoading(false)
         return
       }
 

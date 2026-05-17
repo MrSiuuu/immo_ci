@@ -24,6 +24,10 @@ import AgentAnnoncesPage from '../pages/agent/AgentAnnoncesPage.jsx'
 import AgentParametresPage from '../pages/agent/AgentParametresPage.jsx'
 import AgentStatistiquesPage from '../pages/agent/AgentStatistiquesPage.jsx'
 import AgentPlaceholderPage from '../pages/agent/AgentPlaceholderPage.jsx'
+import AgentLeadsPage from '../pages/agent/AgentLeadsPage.jsx'
+import AgentProfilPage from '../pages/agent/AgentProfilPage.jsx'
+import AgentAbonnementPage from '../pages/agent/AgentAbonnementPage.jsx'
+import AgentOwnerOnlyRoute from '../components/AgentOwnerOnlyRoute.jsx'
 import AnnonceDetailPage from '../pages/admin/AnnonceDetailPage.jsx'
 import StatistiquesPage from '../pages/admin/StatistiquesPage.jsx'
 import StatAnnoncesPage from '../pages/admin/StatAnnoncesPage.jsx'
@@ -198,9 +202,37 @@ export default function AppRouter() {
         element={
           <AuthFlowGuard>
             <AgentOnlyRoute>
-              <AgentShell title="Contacts">
-                <AgentPlaceholderPage title="Contacts" />
+              <AgentShell title="Leads">
+                <AgentLeadsPage />
               </AgentShell>
+            </AgentOnlyRoute>
+          </AuthFlowGuard>
+        }
+      />
+      <Route
+        path="/agence/profil"
+        element={
+          <AuthFlowGuard>
+            <AgentOnlyRoute>
+              <AgentOwnerOnlyRoute>
+                <AgentShell title="Profil agence">
+                  <AgentProfilPage />
+                </AgentShell>
+              </AgentOwnerOnlyRoute>
+            </AgentOnlyRoute>
+          </AuthFlowGuard>
+        }
+      />
+      <Route
+        path="/agence/abonnement"
+        element={
+          <AuthFlowGuard>
+            <AgentOnlyRoute>
+              <AgentOwnerOnlyRoute>
+                <AgentShell title="Abonnement">
+                  <AgentAbonnementPage />
+                </AgentShell>
+              </AgentOwnerOnlyRoute>
             </AgentOnlyRoute>
           </AuthFlowGuard>
         }

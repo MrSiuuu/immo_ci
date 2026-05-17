@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { getAdminDashboardStats } from '../../features/annonces/annoncesService'
 import { displayOrDash } from '../../lib/displayOrDash'
 import { useUser } from '../../hooks/useUser'
@@ -15,6 +15,7 @@ function badgeStatut(tone) {
 }
 
 export default function DashboardPage() {
+  const navigate = useNavigate()
   const { user } = useUser()
   const [nomAdmin, setNomAdmin] = useState(user?.user_metadata?.full_name || user?.email || 'Admin')
   const [loading, setLoading] = useState(true)
@@ -119,6 +120,7 @@ export default function DashboardPage() {
               <li key={a.id}>
                 <button
                   type="button"
+                  onClick={() => navigate(`/admin/annonces/${a.id}`)}
                   className="flex w-full cursor-pointer flex-col gap-2 py-4 text-left transition first:pt-0 hover:bg-[#FAF6EF]/80 dark:hover:bg-slate-800/80 sm:flex-row sm:items-center sm:justify-between"
                 >
                   <div className="min-w-0">
@@ -151,6 +153,10 @@ export default function DashboardPage() {
               <li key={item.id}>
                 <button
                   type="button"
+                  onClick={() => {
+                    const targetId = item.annonceId ?? item.id
+                    if (targetId) navigate(`/admin/annonces/${targetId}`)
+                  }}
                   className="flex w-full cursor-pointer gap-3 rounded-lg py-3 text-left transition hover:bg-[#FAF6EF]/80 dark:hover:bg-slate-800/80"
                 >
                   <span className={`mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full ${item.dot}`} />

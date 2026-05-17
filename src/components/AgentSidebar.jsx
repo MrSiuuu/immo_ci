@@ -1,6 +1,17 @@
 import { createElement } from 'react'
 import { NavLink } from 'react-router-dom'
-import { BarChart3, Building2, LayoutDashboard, LogOut, MessageSquare, Settings, Sparkles, Users } from 'lucide-react'
+import {
+  BarChart3,
+  Building2,
+  CreditCard,
+  LayoutDashboard,
+  LogOut,
+  MessageSquare,
+  Settings,
+  Sparkles,
+  UserCircle,
+  Users,
+} from 'lucide-react'
 import { useUser } from '../hooks/useUser'
 import { deconnexion } from '../features/auth/authService'
 
@@ -106,19 +117,33 @@ export default function AgentSidebar() {
         <NavItem to="/agence/annonces" icon={Building2} tourId="agent-nav-annonces">
           <span>Mes annonces</span>
         </NavItem>
-        <SectionLabel>Services</SectionLabel>
-        <NavItem to="/agence/contacts" icon={Users} disabled badge="A venir">
-          <span>Contacts</span>
-        </NavItem>
-        <NavItem to="/agence/messagerie" icon={MessageSquare} disabled badge="A venir">
-          <span>Messagerie</span>
+        <NavItem to="/agence/contacts" icon={Users}>
+          <span>Leads</span>
         </NavItem>
         <NavItem to="/agence/statistiques" icon={BarChart3}>
           <span>Statistiques</span>
         </NavItem>
+
+        <SectionLabel>Services</SectionLabel>
+        <NavItem to="/agence/messagerie" icon={MessageSquare} disabled badge="A venir">
+          <span>Messagerie</span>
+        </NavItem>
         <NavItem to="/agence/agent-ia" icon={Sparkles} disabled badge="A venir">
           <span>Agent IA</span>
         </NavItem>
+
+        {isOwner ? (
+          <>
+            <SectionLabel>Mon agence</SectionLabel>
+            <NavItem to="/agence/profil" icon={UserCircle}>
+              <span>Profil</span>
+            </NavItem>
+            <NavItem to="/agence/abonnement" icon={CreditCard}>
+              <span>Abonnement</span>
+            </NavItem>
+          </>
+        ) : null}
+
         <SectionLabel>Système</SectionLabel>
         <NavItem to="/agence/parametres" icon={Settings} tourId="agent-nav-settings">
           <span>Paramètres</span>

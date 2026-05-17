@@ -249,7 +249,7 @@ export default function AgentParametresPage() {
       return
     }
     if (pwdNew !== pwdConfirm) {
-      setFormErr('Les mots de passe ne correspondent pas.')
+      setFormErr('Les nouveaux mots de passe ne correspondent pas.')
       return
     }
     setPending(true)
@@ -276,22 +276,7 @@ export default function AgentParametresPage() {
     setPwdCurrent('')
     setPwdNew('')
     setPwdConfirm('')
-    showToast('success', 'Mot de passe mis à jour.')
-  }
-
-  async function handleOwnerCredentials(e) {
-    e.preventDefault()
-    setFormErr(null)
-    if (!email.trim()) {
-      setFormErr('Veuillez renseigner le nouvel email.')
-      return
-    }
-    const { error } = await supabase.auth.updateUser({ email: email.trim() })
-    if (error) {
-      showToast('error', error.message ?? 'Mise à jour email impossible.')
-      return
-    }
-    showToast('success', 'Email de connexion mis à jour. Un email de confirmation a été envoyé.')
+    showToast('success', 'Mot de passe modifié avec succès')
   }
 
   async function toggleCoord(field, value) {
@@ -310,20 +295,71 @@ export default function AgentParametresPage() {
       <div className="mx-auto max-w-3xl space-y-6 pb-8 text-[#0F1923]">
         <header>
           <h1 className="text-2xl font-semibold tracking-tight" style={FONT_INTER}>Paramètres</h1>
-          <p className="mt-1 text-sm text-[#666666]">Compte secondaire : vous pouvez uniquement modifier vos identifiants.</p>
+          <p className="mt-1 text-sm text-[#666666]">Compte secondaire : vous pouvez uniquement modifier votre mot de passe.</p>
         </header>
+        {toast ? (
+          <div
+            role="status"
+            className={`fixed bottom-6 left-1/2 z-50 max-w-md -translate-x-1/2 rounded-lg px-4 py-3 text-sm shadow-lg ${
+              toast.type === 'success'
+                ? 'border border-emerald-200 bg-emerald-50 text-emerald-900'
+                : 'border border-red-200 bg-red-50 text-red-900'
+            }`}
+          >
+            {toast.message}
+          </div>
+        ) : null}
         {formErr ? <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">{formErr}</p> : null}
-        <form onSubmit={handleOwnerCredentials} className="space-y-4 rounded-2xl border border-[#E8E3D8] bg-white p-6">
-          <label className={labelClass} htmlFor="agent-login-email">Modifier mon adresse email de connexion</label>
-          <input id="agent-login-email" type="email" className={inputClass} value={email} onChange={(e) => setEmail(e.target.value)} />
-          <p className="text-xs text-[#666666]">Un email de confirmation sera envoyé après mise à jour.</p>
-          <button type="submit" className="rounded-full bg-[#E02020] px-4 py-2 text-sm text-white">Mettre à jour l&apos;email</button>
-        </form>
-        <form onSubmit={handlePassword} className="space-y-4 rounded-2xl border border-[#E8E3D8] bg-white p-6">
-          <label className={labelClass} htmlFor="ap-pn">Modifier mon mot de passe</label>
-          <input id="ap-pn" type="password" minLength={8} className={inputClass} value={pwdNew} onChange={(e) => setPwdNew(e.target.value)} />
-          <input id="ap-p2" type="password" className={inputClass} value={pwdConfirm} onChange={(e) => setPwdConfirm(e.target.value)} placeholder="Confirmer le mot de passe" />
-          <button type="submit" className="rounded-full bg-[#111111] px-4 py-2 text-sm text-white">Mettre à jour le mot de passe</button>
+        <form onSubmit={handlePassword} className="space-y-4">
+          <Section icon={KeyRound} title="Mot de passe du compte">
+            <div>
+              <label className={labelClass} htmlFor="agent-sec-pc">
+                Mot de passe actuel *
+              </label>
+              <input
+                id="agent-sec-pc"
+                type="password"
+                autoComplete="current-password"
+                className={inputClass}
+                value={pwdCurrent}
+                onChange={(e) => setPwdCurrent(e.target.value)}
+              />
+            </div>
+            <div>
+              <label className={labelClass} htmlFor="agent-sec-pn">
+                Nouveau mot de passe
+              </label>
+              <input
+                id="agent-sec-pn"
+                type="password"
+                autoComplete="new-password"
+                minLength={8}
+                className={inputClass}
+                value={pwdNew}
+                onChange={(e) => setPwdNew(e.target.value)}
+              />
+            </div>
+            <div>
+              <label className={labelClass} htmlFor="agent-sec-p2">
+                Confirmer le nouveau mot de passe
+              </label>
+              <input
+                id="agent-sec-p2"
+                type="password"
+                autoComplete="new-password"
+                className={inputClass}
+                value={pwdConfirm}
+                onChange={(e) => setPwdConfirm(e.target.value)}
+              />
+            </div>
+            <button
+              type="submit"
+              disabled={pending}
+              className="rounded-full bg-[#E02020] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#c81d1d] disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {pending ? 'Mise à jour…' : 'Mettre à jour le mot de passe'}
+            </button>
+          </Section>
         </form>
       </div>
     )
@@ -596,7 +632,7 @@ export default function AgentParametresPage() {
           <button
             type="submit"
             disabled={pending}
-            className="rounded-full bg-[#0F1923] px-4 py-2.5 text-sm font-medium text-white transition hover:bg-[#1f2a37] disabled:opacity-50 dark:bg-slate-700 dark:hover:bg-slate-600"
+            className="rounded-full bg-[#E02020] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#c81d1d] disabled:cursor-not-allowed disabled:opacity-50"
           >
             {pending ? 'Mise à jour…' : 'Mettre à jour le mot de passe'}
           </button>

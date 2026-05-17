@@ -37,8 +37,10 @@ export async function getAdminDashboardStats() {
   const annoncesRecentes = (recentRes.data ?? []).slice(0, 5)
   const activite = (recentRes.data ?? []).map((row) => ({
     id: row.id,
+    annonceId: row.id,
     texte: `Nouvelle annonce: ${row.titre ?? 'Sans titre'} - ${row.agences?.nom ?? 'Agence inconnue'}`,
     temps: row.created_at,
+    dot: row.statut === 'publie' ? 'bg-emerald-500' : 'bg-amber-500',
   }))
 
   const annoncesPubliees = annoncesRes.count ?? 0

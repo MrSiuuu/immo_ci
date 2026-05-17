@@ -6,6 +6,8 @@ import { supabase } from '../lib/supabase'
 
 const FONT_PLAYFAIR = { fontFamily: '"Playfair Display", serif' }
 
+const POLL_MS = 30_000
+
 /**
  * Barre supérieure admin : titre + date, nouvelle agence, notifications.
  */
@@ -26,8 +28,11 @@ export default function TopBar({ title }) {
   }, [])
 
   useEffect(() => {
-    if (!isAdmin || !user?.id) return
+    if (!isAdmin || !user?.id) return undefined
+
     let cancelled = false
+    let pollId = null
+
     async function loadNotifs() {
       const { data } = await supabase
         .from('notifications')
@@ -38,15 +43,48 @@ export default function TopBar({ title }) {
         .limit(10)
       if (!cancelled) setNotifications(data ?? [])
     }
+
+    function clearPoll() {
+      if (pollId != null) {
+        window.clearInterval(pollId)
+        pollId = null
+      }
+    }
+
+    function startPoll() {
+      clearPoll()
+      pollId = window.setInterval(() => {
+        if (!cancelled) loadNotifs()
+      }, POLL_MS)
+    }
+
     loadNotifs()
+    startPoll()
+
     const channel = supabase
       .channel('admin-notifications')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'notifications', filter: `user_id=eq.${user.id}` }, () => {
-        loadNotifs()
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'notifications', filter: `user_id=eq.${user.id}` },
+        () => {
+          if (!cancelled) loadNotifs()
+        },
+      )
+      .subscribe((status) => {
+        if (cancelled) return
+        if (import.meta.env.DEV) {
+          console.info('[TopBar] notifications realtime:', status)
+        }
+        if (status === 'SUBSCRIBED') {
+          clearPoll()
+        } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+          startPoll()
+        }
       })
-      .subscribe()
+
     return () => {
       cancelled = true
+      clearPoll()
       supabase.removeChannel(channel)
     }
   }, [isAdmin, user?.id])
