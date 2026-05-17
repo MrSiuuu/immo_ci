@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { displayOrDash } from '../../lib/displayOrDash'
 
@@ -19,6 +20,7 @@ function sourceBadge(source) {
 }
 
 export default function LeadsPage() {
+  const navigate = useNavigate()
   const [rows, setRows] = useState([])
   const [count, setCount] = useState(0)
   const [page, setPage] = useState(1)
@@ -71,7 +73,7 @@ export default function LeadsPage() {
       const to = from + PAGE_SIZE - 1
       let q = supabase
         .from('contacts')
-        .select('id, nom, telephone, message, source, created_at, annonce_id, agence_id, annonces(titre), agences(nom)', {
+        .select('id, nom, email, telephone, message, source, created_at, annonce_id, agence_id, annonces(titre), agences(nom)', {
           count: 'exact',
         })
         .order('created_at', { ascending: false })
@@ -211,10 +213,15 @@ export default function LeadsPage() {
             {rows.map((r) => {
               const source = r.source || 'formulaire'
               return (
-                <tr key={r.id} className="border-t border-[#E5E7EB]">
+                <tr
+                  key={r.id}
+                  className="cursor-pointer border-t border-[#E5E7EB] hover:bg-[#F9FAFB]"
+                  onClick={() => navigate(`/admin/leads/${r.id}`)}
+                >
                   <td className="px-3 py-2">
                     <p className="font-medium">{displayOrDash(r.nom)}</p>
                     <p className="text-[#6B7280]">{displayOrDash(r.telephone)}</p>
+                    <p className="text-xs text-[#6B7280]">{displayOrDash(r.email)}</p>
                   </td>
                   <td className="px-3 py-2">
                     <p>{displayOrDash(r.annonces?.titre)}</p>

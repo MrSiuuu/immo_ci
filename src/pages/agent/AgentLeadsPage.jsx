@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { displayOrDash } from '../../lib/displayOrDash'
 import { useUser } from '../../hooks/useUser'
@@ -31,6 +32,7 @@ function messageExcerpt(text, max = 120) {
  * Pas d'export CSV (reserve admin).
  */
 export default function AgentLeadsPage() {
+  const navigate = useNavigate()
   const { agenceId } = useUser()
   const [rows, setRows] = useState([])
   const [count, setCount] = useState(0)
@@ -104,7 +106,7 @@ export default function AgentLeadsPage() {
       const to = from + PAGE_SIZE - 1
       let q = supabase
         .from('contacts')
-        .select('id, nom, telephone, message, source, created_at, annonce_id, annonces(titre)', {
+        .select('id, nom, email, telephone, message, source, created_at, annonce_id, annonces(titre)', {
           count: 'exact',
         })
         .eq('agence_id', agenceId)
@@ -251,10 +253,15 @@ export default function AgentLeadsPage() {
             {rows.map((r) => {
               const source = r.source || 'formulaire'
               return (
-                <tr key={r.id} className="border-t border-[#E5E7EB]">
+                <tr
+                  key={r.id}
+                  className="cursor-pointer border-t border-[#E5E7EB] hover:bg-[#F9FAFB]"
+                  onClick={() => navigate(`/agence/contacts/${r.id}`)}
+                >
                   <td className="px-3 py-2">
                     <p className="font-medium">{displayOrDash(r.nom)}</p>
                     <p className="text-[#6B7280]">{displayOrDash(r.telephone)}</p>
+                    <p className="text-xs text-[#6B7280]">{displayOrDash(r.email)}</p>
                   </td>
                   <td className="px-3 py-2">{displayOrDash(r.annonces?.titre)}</td>
                   <td className="px-3 py-2">

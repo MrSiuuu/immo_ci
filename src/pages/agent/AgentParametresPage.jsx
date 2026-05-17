@@ -2,6 +2,8 @@ import { createElement, useCallback, useEffect, useState } from 'react'
 import { Building2, Image, KeyRound, MapPin, Phone } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { useUser } from '../../hooks/useUser'
+import PhoneInputCI from '../../components/PhoneInputCI.jsx'
+import { formatPhoneForDb, parseLocalDigits, validateLocalDigits } from '../../lib/phoneCi.js'
 import { setStatutAgent, updateAgenceInfos } from '../../features/agences/agencesService.js'
 
 const FONT_INTER = { fontFamily: '"Inter", sans-serif' }
@@ -63,8 +65,8 @@ export default function AgentParametresPage() {
     setDescription(agence.description ?? '')
     setAdresse(agence.adresse ?? '')
     setSiteWeb(agence.site_web ?? '')
-    setTelephone(agence.telephone ?? '')
-    setWhatsapp(agence.whatsapp ?? '')
+    setTelephone(parseLocalDigits(agence.telephone))
+    setWhatsapp(parseLocalDigits(agence.whatsapp))
     setEmail(agence.email ?? '')
     setVilleId(agence.ville_id != null ? String(agence.ville_id) : '')
     setQuartier(agence.quartier ?? '')
@@ -143,13 +145,10 @@ export default function AgentParametresPage() {
     if (emailValue && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailValue)) {
       nextErrs.email = 'Email invalide.'
     }
-    const digits = (v) => v.replace(/\D/g, '')
-    const telDigits = digits(telephone.trim())
-    const waDigits = digits(whatsapp.trim())
-    if (telephone.trim() && telDigits.length < 8) nextErrs.telephone = 'Telephone invalide (min 8 chiffres).'
-    if (telephone.trim() && !/^[\d\s+().-]+$/.test(telephone.trim())) nextErrs.telephone = 'Telephone invalide.'
-    if (whatsapp.trim() && waDigits.length < 8) nextErrs.whatsapp = 'WhatsApp invalide (min 8 chiffres).'
-    if (whatsapp.trim() && !/^[\d\s+().-]+$/.test(whatsapp.trim())) nextErrs.whatsapp = 'WhatsApp invalide.'
+    const telErr = validateLocalDigits(telephone, { required: false })
+    const waErr = validateLocalDigits(whatsapp, { required: false })
+    if (telErr) nextErrs.telephone = telErr
+    if (waErr) nextErrs.whatsapp = waErr
     setFieldErrs(nextErrs)
     return Object.keys(nextErrs).length > 0 ? 'Veuillez corriger les champs invalides.' : null
   }
@@ -169,8 +168,8 @@ export default function AgentParametresPage() {
       description: description.trim() || null,
       adresse: adresse.trim() || null,
       site_web: site_web.trim() || null,
-      telephone: telephone.trim() || null,
-      whatsapp: whatsapp.trim() || null,
+      telephone: formatPhoneForDb(telephone),
+      whatsapp: formatPhoneForDb(whatsapp),
       email: email.trim() || null,
       ville_id: villeId || null,
       quartier: quartier.trim() || null,
@@ -440,24 +439,25 @@ export default function AgentParametresPage() {
 
         <Section icon={Phone} title="Contact">
           <div>
-            <label className={labelClass} htmlFor="ap-tel">
-              Téléphone
-            </label>
-            <input id="ap-tel" className={inputClass} value={telephone} onChange={(e) => setTelephone(e.target.value)} />
-            {fieldErrs.telephone ? <p className="mt-1 text-xs text-[#E53935]">{fieldErrs.telephone}</p> : null}
+            <PhoneInputCI
+              id="ap-tel"
+              label="Téléphone"
+              labelClassName={labelClass}
+              value={telephone}
+              onChange={setTelephone}
+              error={fieldErrs.telephone}
+            />
           </div>
           <div>
-            <label className={labelClass} htmlFor="ap-wa">
-              WhatsApp
-            </label>
-            <input
+            <PhoneInputCI
               id="ap-wa"
-              className={inputClass}
-              placeholder="+225 …"
+              label="WhatsApp"
+              labelClassName={labelClass}
               value={whatsapp}
-              onChange={(e) => setWhatsapp(e.target.value)}
+              onChange={setWhatsapp}
+              error={fieldErrs.whatsapp}
+              showWhatsAppHelp
             />
-            {fieldErrs.whatsapp ? <p className="mt-1 text-xs text-[#E53935]">{fieldErrs.whatsapp}</p> : null}
           </div>
           <div>
             <label className={labelClass} htmlFor="ap-mail">

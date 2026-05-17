@@ -3,6 +3,8 @@ import { Building2, Calendar, Mail, MapPin, Phone } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { displayOrDash } from '../../lib/displayOrDash'
 import { useUser } from '../../hooks/useUser'
+import PhoneInputCI from '../../components/PhoneInputCI.jsx'
+import { formatPhoneForDb, parseLocalDigits, validateLocalDigits } from '../../lib/phoneCi.js'
 import { updateAgenceInfos } from '../../features/agences/agencesService.js'
 
 const FONT_INTER = { fontFamily: '"Inter", sans-serif' }
@@ -87,8 +89,8 @@ export default function AgentProfilPage() {
     setDescription(agence.description ?? '')
     setAdresse(agence.adresse ?? '')
     setSiteWeb(agence.site_web ?? '')
-    setTelephone(agence.telephone ?? '')
-    setWhatsapp(agence.whatsapp ?? '')
+    setTelephone(parseLocalDigits(agence.telephone))
+    setWhatsapp(parseLocalDigits(agence.whatsapp))
     setEmail(agence.email ?? '')
     setVilleId(agence.ville_id != null ? String(agence.ville_id) : '')
     setNumeroAgr(agence.numero_agrement_mclu ?? '')
@@ -128,13 +130,10 @@ export default function AgentProfilPage() {
     if (emailValue && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailValue)) {
       nextErrs.email = 'Email invalide.'
     }
-    const digits = (v) => v.replace(/\D/g, '')
-    const telDigits = digits(telephone.trim())
-    const waDigits = digits(whatsapp.trim())
-    if (telephone.trim() && telDigits.length < 8) nextErrs.telephone = 'Telephone invalide (min 8 chiffres).'
-    if (telephone.trim() && !/^[\d\s+().-]+$/.test(telephone.trim())) nextErrs.telephone = 'Telephone invalide.'
-    if (whatsapp.trim() && waDigits.length < 8) nextErrs.whatsapp = 'WhatsApp invalide (min 8 chiffres).'
-    if (whatsapp.trim() && !/^[\d\s+().-]+$/.test(whatsapp.trim())) nextErrs.whatsapp = 'WhatsApp invalide.'
+    const telErr = validateLocalDigits(telephone, { required: false })
+    const waErr = validateLocalDigits(whatsapp, { required: false })
+    if (telErr) nextErrs.telephone = telErr
+    if (waErr) nextErrs.whatsapp = waErr
     setFieldErrs(nextErrs)
     return Object.keys(nextErrs).length > 0 ? 'Veuillez corriger les champs invalides.' : null
   }
@@ -154,8 +153,8 @@ export default function AgentProfilPage() {
       description: description.trim() || null,
       adresse: adresse.trim() || null,
       site_web: site_web.trim() || null,
-      telephone: telephone.trim() || null,
-      whatsapp: whatsapp.trim() || null,
+      telephone: formatPhoneForDb(telephone),
+      whatsapp: formatPhoneForDb(whatsapp),
       email: email.trim() || null,
       ville_id: villeId || null,
       numero_agrement_mclu: numeroAgr.trim() || null,
@@ -279,18 +278,25 @@ export default function AgentProfilPage() {
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
-                <label className={labelClass} htmlFor="pf-tel">
-                  Telephone
-                </label>
-                <input id="pf-tel" className={inputClass} value={telephone} onChange={(e) => setTelephone(e.target.value)} />
-                {fieldErrs.telephone ? <p className="mt-1 text-xs text-[#E53935]">{fieldErrs.telephone}</p> : null}
+                <PhoneInputCI
+                  id="pf-tel"
+                  label="Telephone"
+                  labelClassName={labelClass}
+                  value={telephone}
+                  onChange={setTelephone}
+                  error={fieldErrs.telephone}
+                />
               </div>
               <div>
-                <label className={labelClass} htmlFor="pf-wa">
-                  WhatsApp
-                </label>
-                <input id="pf-wa" className={inputClass} value={whatsapp} onChange={(e) => setWhatsapp(e.target.value)} />
-                {fieldErrs.whatsapp ? <p className="mt-1 text-xs text-[#E53935]">{fieldErrs.whatsapp}</p> : null}
+                <PhoneInputCI
+                  id="pf-wa"
+                  label="WhatsApp"
+                  labelClassName={labelClass}
+                  value={whatsapp}
+                  onChange={setWhatsapp}
+                  error={fieldErrs.whatsapp}
+                  showWhatsAppHelp
+                />
               </div>
             </div>
             <div>

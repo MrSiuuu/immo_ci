@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
+import PhoneInputCI from '../../components/PhoneInputCI.jsx'
+import { formatPhoneForDb, parseLocalDigits, validateLocalDigits } from '../../lib/phoneCi.js'
 import { creerAgence, creerCompteAgent, getAgenceById, modifierAgence } from './agencesService.js'
 
 const inputClass =
@@ -33,6 +35,7 @@ export default function AgenceFormPage() {
   const [responsablePrenom, setResponsablePrenom] = useState('')
 
   const [submitErr, setSubmitErr] = useState(null)
+  const [fieldErrs, setFieldErrs] = useState({})
   const [pending, setPending] = useState(false)
 
   const [recap, setRecap] = useState(null)
@@ -52,8 +55,8 @@ export default function AgenceFormPage() {
       }
       setNom(row.nom ?? '')
       setEmail(row.email ?? '')
-      setWhatsapp(row.whatsapp ?? '')
-      setTelephone(row.telephone ?? '')
+      setWhatsapp(parseLocalDigits(row.whatsapp))
+      setTelephone(parseLocalDigits(row.telephone))
       setAdresse(row.adresse ?? '')
       setVille(row.ville ?? '')
       setQuartier(row.quartier ?? '')
@@ -71,8 +74,18 @@ export default function AgenceFormPage() {
     e.preventDefault()
     setSubmitErr(null)
 
-    if (!nom.trim() || !email.trim() || !whatsapp.trim()) {
-      setSubmitErr('Nom, email et WhatsApp sont obligatoires.')
+    const nextFieldErrs = {}
+    if (!nom.trim() || !email.trim()) {
+      setSubmitErr('Nom et email sont obligatoires.')
+      return
+    }
+    const waErr = validateLocalDigits(whatsapp, { required: true })
+    const telErr = validateLocalDigits(telephone, { required: false })
+    if (waErr) nextFieldErrs.whatsapp = waErr
+    if (telErr) nextFieldErrs.telephone = telErr
+    setFieldErrs(nextFieldErrs)
+    if (Object.keys(nextFieldErrs).length > 0) {
+      setSubmitErr('Veuillez corriger les champs invalides.')
       return
     }
 
@@ -92,8 +105,8 @@ export default function AgenceFormPage() {
     const donnees = {
       nom: nom.trim(),
       email: email.trim(),
-      whatsapp: whatsapp.trim(),
-      telephone: telephone.trim() || null,
+      whatsapp: formatPhoneForDb(whatsapp),
+      telephone: formatPhoneForDb(telephone),
       adresse: adresse.trim() || null,
       ville: ville.trim() || null,
       quartier: quartier.trim() || null,
@@ -256,12 +269,24 @@ export default function AgenceFormPage() {
             <input className={inputClass} type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
           </div>
           <div>
-            <label className="mb-1.5 block text-sm font-medium text-[#0F1923] dark:text-slate-200">WhatsApp *</label>
-            <input className={inputClass} value={whatsapp} onChange={(e) => setWhatsapp(e.target.value)} required />
+            <PhoneInputCI
+              id="agence-wa"
+              label="WhatsApp"
+              value={whatsapp}
+              onChange={setWhatsapp}
+              required
+              error={fieldErrs.whatsapp}
+              showWhatsAppHelp
+            />
           </div>
           <div>
-            <label className="mb-1.5 block text-sm font-medium text-[#0F1923] dark:text-slate-200">Téléphone</label>
-            <input className={inputClass} value={telephone} onChange={(e) => setTelephone(e.target.value)} />
+            <PhoneInputCI
+              id="agence-tel"
+              label="Téléphone"
+              value={telephone}
+              onChange={setTelephone}
+              error={fieldErrs.telephone}
+            />
           </div>
           <div>
             <label className="mb-1.5 block text-sm font-medium text-[#0F1923] dark:text-slate-200">Adresse</label>

@@ -1,5 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import PhoneInputCI from '../../components/PhoneInputCI.jsx'
+import { formatPhoneForDb, parseLocalDigits, validateLocalDigits } from '../../lib/phoneCi.js'
 import { modifierAgence } from '../agences/agencesService.js'
 import { useUser } from '../../hooks/useUser'
 import { agentNeedsOnboarding } from '../../lib/agentOnboarding.js'
@@ -14,11 +16,12 @@ const inputClass =
 export default function OnboardingPage() {
   const navigate = useNavigate()
   const { role, agenceId, agence, loading, mustChangePassword, refreshProfile } = useUser()
-  const [whatsapp, setWhatsapp] = useState(() => (agence?.whatsapp != null ? String(agence.whatsapp) : ''))
+  const [whatsapp, setWhatsapp] = useState(() => parseLocalDigits(agence?.whatsapp))
   const [description, setDescription] = useState(() => agence?.description ?? '')
   const [logo, setLogo] = useState(() => agence?.logo ?? '')
-  const [telephone, setTelephone] = useState(() => agence?.telephone ?? '')
+  const [telephone, setTelephone] = useState(() => parseLocalDigits(agence?.telephone))
   const [adresse, setAdresse] = useState(() => agence?.adresse ?? '')
+  const [fieldErrs, setFieldErrs] = useState({})
   const [err, setErr] = useState(null)
   const [pending, setPending] = useState(false)
 
@@ -39,16 +42,22 @@ export default function OnboardingPage() {
   async function handleEtape1(e) {
     e.preventDefault()
     setErr(null)
-    if (!whatsapp.trim()) {
-      setErr('Le numéro WhatsApp est obligatoire.')
+    const nextFieldErrs = {}
+    const waErr = validateLocalDigits(whatsapp, { required: true })
+    const telErr = validateLocalDigits(telephone, { required: false })
+    if (waErr) nextFieldErrs.whatsapp = waErr
+    if (telErr) nextFieldErrs.telephone = telErr
+    setFieldErrs(nextFieldErrs)
+    if (Object.keys(nextFieldErrs).length > 0) {
+      setErr('Veuillez corriger les champs invalides.')
       return
     }
     setPending(true)
     const { error } = await modifierAgence(agenceId, {
-      whatsapp: whatsapp.trim(),
+      whatsapp: formatPhoneForDb(whatsapp),
       description: description.trim() || null,
       logo: logo.trim() || null,
-      telephone: telephone.trim() || null,
+      telephone: formatPhoneForDb(telephone),
       adresse: adresse.trim() || null,
     })
     setPending(false)
@@ -84,8 +93,15 @@ export default function OnboardingPage() {
             Étape 1 - Profil agence
           </h2>
           <div>
-            <label className="mb-1.5 block text-sm font-medium text-[#0F1923] dark:text-slate-200">WhatsApp *</label>
-            <input className={inputClass} value={whatsapp} onChange={(e) => setWhatsapp(e.target.value)} required />
+            <PhoneInputCI
+              id="onboarding-wa"
+              label="WhatsApp"
+              value={whatsapp}
+              onChange={setWhatsapp}
+              required
+              error={fieldErrs.whatsapp}
+              showWhatsAppHelp
+            />
           </div>
           <div>
             <label className="mb-1.5 block text-sm font-medium text-[#0F1923] dark:text-slate-200">Description</label>
@@ -101,8 +117,13 @@ export default function OnboardingPage() {
             <input className={inputClass} value={logo} onChange={(e) => setLogo(e.target.value)} />
           </div>
           <div>
-            <label className="mb-1.5 block text-sm font-medium text-[#0F1923] dark:text-slate-200">Téléphone</label>
-            <input className={inputClass} value={telephone} onChange={(e) => setTelephone(e.target.value)} />
+            <PhoneInputCI
+              id="onboarding-tel"
+              label="Téléphone"
+              value={telephone}
+              onChange={setTelephone}
+              error={fieldErrs.telephone}
+            />
           </div>
           <div>
             <label className="mb-1.5 block text-sm font-medium text-[#0F1923] dark:text-slate-200">Adresse</label>

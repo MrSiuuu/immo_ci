@@ -37,6 +37,8 @@ import StatPrixPage from '../pages/admin/StatPrixPage.jsx'
 import StatClassementsPage from '../pages/admin/StatClassementsPage.jsx'
 import StatTendancesPage from '../pages/admin/StatTendancesPage.jsx'
 import LeadsPage from '../pages/admin/LeadsPage.jsx'
+import LeadDetailPage from '../pages/admin/LeadDetailPage.jsx'
+import AgentLeadDetailPage from '../pages/agent/AgentLeadDetailPage.jsx'
 import AppartementForm from '../features/annonces/forms/AppartementForm.jsx'
 import VillaForm from '../features/annonces/forms/VillaForm.jsx'
 import DuplexForm from '../features/annonces/forms/DuplexForm.jsx'
@@ -204,6 +206,18 @@ export default function AppRouter() {
             <AgentOnlyRoute>
               <AgentShell title="Leads">
                 <AgentLeadsPage />
+              </AgentShell>
+            </AgentOnlyRoute>
+          </AuthFlowGuard>
+        }
+      />
+      <Route
+        path="/agence/contacts/:id"
+        element={
+          <AuthFlowGuard>
+            <AgentOnlyRoute>
+              <AgentShell title="Détail du contact">
+                <AgentLeadDetailPage />
               </AgentShell>
             </AgentOnlyRoute>
           </AuthFlowGuard>
@@ -440,6 +454,20 @@ export default function AppRouter() {
               <RequireAdmin>
                 <AdminShell title="Leads">
                   <LeadsPage />
+                </AdminShell>
+              </RequireAdmin>
+            </AdminOnlyRoute>
+          </AuthFlowGuard>
+        }
+      />
+      <Route
+        path="/admin/leads/:id"
+        element={
+          <AuthFlowGuard>
+            <AdminOnlyRoute>
+              <RequireAdmin>
+                <AdminShell title="Détail du lead">
+                  <LeadDetailPage />
                 </AdminShell>
               </RequireAdmin>
             </AdminOnlyRoute>
